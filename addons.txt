@@ -1,0 +1,5 @@
+1::addon_fold::Addon Fold::Fold::30.00::Active
+2::addon_plastic::Addon Plastic::Plastic::5.00::Active
+3::addon_detergent::Addon Detergent::Detergent::15.00::Active
+4::addon_fabcon::Addon Fabric Conditioner::Fabric Conditioner::10.00::Active
+5::addon_drymin::Addon Drying Add Minutes::Add-on Time (10 minutes dry)::10.00::Active
