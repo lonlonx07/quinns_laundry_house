@@ -1,7 +1,5 @@
-Python==3.12.10
 Flask==3.0.2
 gunicorn==23.0.0
 opencv-python==4.9.0.80
 numpy==1.26.4
 websockets==14.1
-psycopg2==2.9.9
