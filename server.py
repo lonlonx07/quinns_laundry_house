@@ -17,10 +17,10 @@ def filtered_booking(filter):
     res = db_con.get_booked_services({'filter':f'WHERE status=\'{filter}\''})
     return render_template("system.html", data=res)
 
-@app.route('/drop_table/<tbl_name>') 
-def drop_table(tbl_name): 
-    res = db_con.drop_table(tbl_name)
-    return jsonify(res)
+# @app.route('/drop_table/<tbl_name>') 
+# def drop_table(tbl_name): 
+#     res = db_con.drop_table(tbl_name)
+#     return jsonify(res)
 
 @app.route('/server-datetime') 
 def server_datetime(): 
