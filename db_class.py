@@ -132,6 +132,17 @@ class db_strg:
         except:
             print("Database connection error!")  
 
+    def drop_table(self, tbl_name):
+        try:
+            if tbl_name == "all":
+                self.cur.execute(f"DROP TABLE IF EXISTS tbl_users, tbl_booking, tbl_booking_addon, tbl_services, tbl_addons, tbl_threads, tbl_thread_messages, tbl_payments, tbl_rewards, tbl_qouta, tbl_pts_earned, tbl_pts_used, tbl_book_tracking;")
+            else:
+                self.cur.execute(f"DROP TABLE IF EXISTS {tbl_name};")
+
+            self.conn.commit()
+        except:
+            self.conn.rollback()
+
     def gen_rand_num_codes(self, len):
         i=0
         code = ""
