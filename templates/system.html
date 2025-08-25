@@ -95,13 +95,13 @@
             <tbody>
                 {% for item in data %}
                 <tr>
-                    <td>{{item[0]}}</td>
-                    <td>{{item[8]}} {{item[9]}}</td>
-                    <td>{{item[2]}}</td>
-                    <td>2025-08-07</td>
-                    <td>{{item[4]}}</td>
+                    <td>{{item['id']}}</td>
+                    <td>{{item['client']}}</td>
+                    <td>{{item['contact']}}</td>
+                    <td>{{item['timestamp']}}</td>
+                    <td>{{item['status']}}</td>
                     <td class="btn-action">
-                        {% if item[3] == 'pending' %}
+                        {% if item['status'] == 'Pending' %}
                             <button class="btn btn-primary" onclick="accept_booking(this)" bid="{{item[0]}}">Accept</button>
                             <button class="btn btn-danger">Decline</button>
                         {% else  %}

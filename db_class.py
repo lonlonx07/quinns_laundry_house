@@ -1,9 +1,10 @@
 import psycopg2
+from psycopg2.extras import RealDictCursor # Or DictCursor
 import random
 from datetime import datetime
 
-x = datetime.now()
-print(x.strftime("%c"))
+# x = datetime.now()
+# print(x.strftime("%c"))
 
 class db_strg:
     otp_list = {}
@@ -39,7 +40,8 @@ class db_strg:
         try:
             self.conn = psycopg2.connect(database=creden_arr['database'], user=creden_arr['user'], password=creden_arr['password'], host=creden_arr['host'], port=creden_arr['port'])
             #self.conn = psycopg2.connect(database="quinns_laundry_db", user = "postgres", password = "XDm4y4143", host = "127.0.0.1", port = "5432")
-            self.cur = self.conn.cursor()
+            self.cur = self.conn.cursor(cursor_factory=RealDictCursor)
+            #self.cur = self.conn.cursor()
             #conn.close()
             try:
                 self.cur.execute('''CREATE TABLE tbl_users (id SERIAL PRIMARY KEY, user_name TEXT NOT NULL, password TEXT NOT NULL, email TEXT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, address TEXT, mobile_no TEXT, timestamp TEXT, status TEXT);''')
@@ -92,13 +94,13 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_payments (id SERIAL PRIMARY KEY, booking_id INT, mode TEXT, ref_num TEXT, amount NUMERIC, status TEXT, timestamp TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_payments (id SERIAL PRIMARY KEY, booking_id INT, mode TEXT, ref_num TEXT, amount NUMERIC, status TEXT, timestamp TEXT, add_charges NUMERIC, description TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_rewards (id SERIAL PRIMARY KEY, description TEXT, pts_req INT, status TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_rewards (id SERIAL PRIMARY KEY, title TEXT, description TEXT, pts_req INT, status TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -110,16 +112,22 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amout INT, source TEXT, timestamp TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amount INT, source TEXT, timestamp TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amout INT, benefit TEXT, timestamp TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_pts_used (user_id INT, amount INT, benefit TEXT, timestamp TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback() 
+
+            try:
+                self.cur.execute('''CREATE TABLE tbl_book_tracking (booking_id INT, sched TEXT, accepted TEXT, pickup TEXT, drop_off TEXT, arrived TEXT, processing TEXT, outgoing TEXT, completed TEXT);''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
 
         except:
             print("Database connection error!")  
@@ -143,7 +151,7 @@ class db_strg:
         sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
         try:
             self.cur.execute(sql)
-            id = (self.cur.fetchone())[0]
+            id = (self.cur.fetchone())['id']
             self.conn.commit()
             self.otp_list[id] = self.gen_rand_num_codes(4)
             res = id
@@ -158,21 +166,24 @@ class db_strg:
         
         try:
             self.cur.execute(sql)
-            id = (self.cur.fetchone())[0]
+            id = (self.cur.fetchone())['id']
             sql = f"INSERT INTO tbl_threads (booking_id, timestamp, status) VALUES (\'{id}\', \'{self.get_datetime()}\', 'Open')"
             self.cur.execute(sql)
             i=1
             for key in arr:
                 try:
-                    tmp_arr = arr[key].split("-")
-                    sql = f"INSERT INTO tbl_booking_addon (booking_id, service_id, prod_type) VALUES (\'{id}\', \'{tmp_arr[1]}\', \'{tmp_arr[0]}\')"
-                    self.cur.execute(sql)
+                    if key != "sched_date":
+                        tmp_arr = arr[key].split("-")
+                        sql = f"INSERT INTO tbl_booking_addon (booking_id, service_id, prod_type) VALUES (\'{id}\', \'{tmp_arr[1]}\', \'{tmp_arr[0]}\')"
+                        self.cur.execute(sql)
                 except:
                     pass
 
-            self.conn.commit()
             self.otp_list[id] = self.gen_rand_num_codes(4)
             res = id
+            sql = f"INSERT INTO tbl_book_tracking (booking_id, sched) VALUES (\'{id}\', \'{arr['sched_date']}\')"
+            self.cur.execute(sql)
+            self.conn.commit()
         except:
             res = "invalid"
             self.conn.rollback()
@@ -180,13 +191,13 @@ class db_strg:
         return res 
     
     def validate_user(self, arr):
-        self.cur.execute(f"SELECT id, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{arr['upass']}'")
+        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{arr['upass']}'")
         res = self.cur.fetchone()
         if res == None:
             res = "invalid"
         else:
-            if res[4] == "Pending":
-                self.otp_list[res[0]] = self.gen_rand_num_codes(4)
+            if res['status'] == "Pending":
+                self.otp_list[res[id]] = self.gen_rand_num_codes(4)
         
         return res
     
@@ -206,45 +217,151 @@ class db_strg:
         return res
     
     def retrieve_otp(self, arr):
+        self.otp_list[arr['user_id']] = self.gen_rand_num_codes(4)
         res = self.otp_list[arr['user_id']]
 
         return res
     
-    def get_user(self, cnd):
-        if cnd == "all":
+    def get_user(self, id):
+        if id == "all":
             self.cur.execute(f"SELECT * FROM tbl_users")
             res = self.cur.fetchall()
         else:
-            self.cur.execute(f"SELECT * FROM tbl_users WHERE "+cnd)
+            self.cur.execute(f"SELECT * FROM tbl_users WHERE id={id}")
             res = self.cur.fetchone()
 
         return res
     
-    def get_services(self, cnd):
-        if cnd == "all":
+    def get_services(self, id):
+        if id == "all":
             self.cur.execute(f"SELECT * FROM tbl_services")
             res = self.cur.fetchall()
         else:
-            self.cur.execute(f"SELECT * FROM tbl_services WHERE "+cnd)
+            self.cur.execute(f"SELECT * FROM tbl_services WHERE id={id}")
             res = self.cur.fetchone()
 
         return res
     
-    def get_addons(self, cnd):
-        if cnd == "all":
+    def get_addons(self, id):
+        if id == "all":
             self.cur.execute(f"SELECT * FROM tbl_addons")
             res = self.cur.fetchall()
         else:
-            self.cur.execute(f"SELECT * FROM tbl_addons WHERE "+cnd)
+            self.cur.execute(f"SELECT * FROM tbl_addons WHERE id={id}")
             res = self.cur.fetchone()
 
         return res
     
+    def get_user_points(self, id):
+        
+        self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_earned WHERE user_id={id}")
+        res_earned = self.cur.fetchone()['sum']
+        if res_earned != "None":
+            res_earned = 0
+
+        self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_used WHERE user_id={id}")
+        res_used = self.cur.fetchone()['sum']
+        if res_used != "None":
+            res_used = 0
+        
+        return res_earned-res_used
+    
+    def get_earned_points(self, id):
+
+        self.cur.execute(f"SELECT * FROM tbl_pts_earned WHERE user_id={id}")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def get_points_history(self, id):
+
+        #self.cur.execute(f"SELECT PE.*, PU.* FROM tbl_pts_earned PE INNER JOIN tbl_pts_used PU ON PE.user_id = PU.user_id WHERE PE.user_id={id} ORDER BY PE.timestamp DESC, PU.timestamp DESC")
+        #res = self.cur.fetchall()
+
+        self.cur.execute(f"SELECT * FROM tbl_pts_earned WHERE user_id={id} ORDER BY timestamp DESC")
+        res1 = self.cur.fetchall()
+        self.cur.execute(f"SELECT * FROM tbl_pts_used WHERE user_id={id} ORDER BY timestamp DESC")
+        res2 = self.cur.fetchall()
+        
+        return [res1, res2]
+    
+    def get_usaged_points(self, id):
+
+        self.cur.execute(f"SELECT * FROM tbl_pts_used WHERE user_id={id}")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def get_points_reward(self, status):
+
+        self.cur.execute(f"SELECT * FROM tbl_rewards WHERE status='{status}' ORDER BY pts_req DESC")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    # new mod
+
+    def get_booking(self, arr):
+        if arr['type'] == "all":
+            self.cur.execute(f"SELECT * FROM tbl_booking WHERE user_id={arr['id']} ORDER BY {arr['sort']}")
+        else:
+            self.cur.execute(f"SELECT * FROM tbl_booking WHERE id={arr['id']} ORDER BY {arr['sort']}")
+
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def get_booking_services(self, arr):
+        self.cur.execute(f"""SELECT BA.* FROM tbl_users U 
+                         LEFT OUTER JOIN tbl_booking B ON B.user_id=U.id 
+                         LEFT OUTER JOIN tbl_booking_addon BA ON BA.booking_id=B.id 
+                         WHERE U.id={arr['id']} ORDER BY {arr['sort']}""")
+        res = self.cur.fetchall()
+        return res
+    
+    def get_booking_tracks(self, arr):
+        self.cur.execute(f"SELECT * FROM tbl_book_tracking WHERE booking_id={arr['id']} ORDER BY {arr['sort']}")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def get_booking_payments(self, arr):
+        self.cur.execute(f"SELECT * FROM tbl_payments WHERE booking_id={arr['id']} ORDER BY {arr['sort']}")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def set_update_field(self, arr):
+        res = "valid"
+        try:
+            self.cur.execute(f"UPDATE {arr['table']} SET {arr['field']}='{arr['value']}' WHERE {arr['ref_field']}={arr['ref_value']}")
+            self.conn.commit()
+        except:
+            res = "invalid"
+            self.conn.rollback()
+            
+        return res
+    
+    def set_custom_update(self, arr):
+        res = "valid"
+        try:
+            self.cur.execute(arr['sql'])
+            self.conn.commit()
+        except:
+            res = "invalid"
+            self.conn.rollback()
+
+        return res
+    
+    # new mod
+    
     def get_booked_services(self, arr):
-        self.cur.execute(f"""SELECT B.*, BA.*, U.id AS uid, U.email AS eadd FROM tbl_booking B 
-                         LEFT OUTER JOIN tbl_users U ON B.user_id=U.id 
-                         LEFT OUTER JOIN tbl_booking_addon BA ON B.id=BA.booking_id
-                         """+arr['filter'])
+        # self.cur.execute(f"""SELECT B.*, BA.*, U.id AS uid, U.email AS eadd FROM tbl_booking B 
+        #                  LEFT OUTER JOIN tbl_users U ON B.user_id=U.id 
+        #                  LEFT OUTER JOIN tbl_booking_addon BA ON B.id=BA.booking_id
+        #                  """+arr['filter'])
+
+        self.cur.execute(f"SELECT * FROM tbl_booking {arr['filter']}")
         res = self.cur.fetchall()
         
         return res

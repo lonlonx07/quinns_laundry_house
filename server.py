@@ -9,31 +9,78 @@ app = Flask(__name__)
 
 @app.route('/') 
 def home(): 
-    res = db_con.get_booked_services({'filter':''})
+    res = db_con.get_booked_services({'filter':'ORDER BY timestamp'})
     return render_template("system.html", data=res)
 
 @app.route('/<filter>') 
 def filtered_booking(filter): 
-    res = db_con.get_booked_services({'filter':f'WHERE B.status=\'{filter}\''})
+    res = db_con.get_booked_services({'filter':f'WHERE status=\'{filter}\''})
     return render_template("system.html", data=res)
-    
-@app.route('/users', methods = ['GET']) 
-def users(): 
+
+@app.route('/server-datetime') 
+def server_datetime(): 
+    res = db_con.get_datetime()
+    dt = res.split(" ")
+    return jsonify(dt)
+
+@app.route('/users/<id>', methods = ['GET']) 
+def users(id): 
     #con = sqlite3.connect("./db/mktg_data.db")
     #data = con.custom_query("get", "SELECT * FROM tbl_products WHERE status='Active' ORDER BY product_name ASC", "*")
-    rows = db_con.get_user("all")
+    rows = db_con.get_user(id)
    
     return jsonify(rows)
 
-@app.route('/services', methods = ['GET']) 
-def services(): 
-    rows = db_con.get_services("all")
+@app.route('/services/<id>', methods = ['GET']) 
+def services(id): 
+    rows = db_con.get_services(id)
     return jsonify(rows)
 
-@app.route('/addons', methods = ['GET']) 
-def addons(): 
-    rows = db_con.get_addons("all")
+@app.route('/addons/<id>', methods = ['GET']) 
+def addons(id): 
+    rows = db_con.get_addons(id)
     return jsonify(rows)
+
+@app.route('/user_points/<id>', methods = ['GET']) 
+def user_points(id): 
+    rows = db_con.get_user_points(id)
+    return jsonify(rows)
+
+@app.route('/earned_points/<id>', methods = ['GET']) 
+def earned_points(id): 
+    rows = db_con.get_earned_points(id)
+    return jsonify(rows)
+
+@app.route('/points_history/<id>', methods = ['GET']) 
+def points_history(id): 
+    rows = db_con.get_points_history(id)
+    return jsonify(rows)
+
+@app.route('/usaged_points/<id>', methods = ['GET']) 
+def usaged_points(id): 
+    rows = db_con.get_usaged_points(id)
+    return jsonify(rows)
+
+@app.route('/points_reward/<status>', methods = ['GET']) 
+def points_reward(status): 
+    rows = db_con.get_points_reward(status)
+    return jsonify(rows)
+
+@app.route('/update_field/<data>', methods = ['POST']) 
+def update_field(data): 
+    arr = json.loads(data)
+    res = db_con.set_update_field(arr)
+    if res != "invalid":
+        return jsonify(res)
+    else:
+        return res
+    
+@app.route('/custom_update/<sql>', methods = ['POST']) 
+def custom_update(sql): 
+    arr = json.loads(sql)
+    res = db_con.set_custom_update(arr)
+    
+    return res
 
 @app.route('/signin/<creden>', methods = ['POST']) 
 def signin(creden): 
@@ -69,12 +116,44 @@ def set_booking(booking_data):
     res = db_con.create_booking(arr)
     return jsonify(res) 
 
-@app.route('/get_booking/<booking_data>', methods = ['GET']) 
-def get_booking(booking_data): 
-    arr = json.loads(booking_data)
+# @app.route('/get_booking/<booking_data>', methods = ['GET']) 
+# def get_booking(booking_data): 
+#     arr = json.loads(booking_data)
     
-    res = db_con.get_booked_services(arr)
+#     res = db_con.get_booked_services(arr)
+#     return jsonify(res) 
+
+# new mod
+
+@app.route('/get_user_booking/<cnd>', methods = ['GET']) 
+def get_user_booking(cnd): 
+    arr = json.loads(cnd)
+    
+    res = db_con.get_booking(arr)
+    return json.dumps(res)
+
+@app.route('/get_booking_services/<cnd>', methods = ['GET']) 
+def get_booking_services(cnd): 
+    arr = json.loads(cnd)
+    
+    res = db_con.get_booking_services(arr)
     return jsonify(res) 
+
+@app.route('/get_booking_tracks/<cnd>', methods = ['GET']) 
+def get_booking_tracks(cnd): 
+    arr = json.loads(cnd)
+    
+    res = db_con.get_booking_tracks(arr)
+    return jsonify(res) 
+
+@app.route('/get_booking_payments/<cnd>', methods = ['GET']) 
+def get_booking_payments(cnd): 
+    arr = json.loads(cnd)
+    
+    res = db_con.get_booking_payments(arr)
+    return jsonify(res) 
+
+# new mod
 
 @app.route('/get_threads/<threads_data>', methods = ['GET']) 
 def get_threads(threads_data): 
