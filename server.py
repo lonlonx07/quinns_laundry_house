@@ -234,4 +234,5 @@ def mod_tbl_billings():
   
 if __name__ == '__main__': 
     host = socket.gethostbyname(socket.gethostname())
-    app.run(host=host, port=10000, debug = True)
+    app.run(host=host, port=5000)
+    
