@@ -25,11 +25,6 @@ def active_bookings():
     res = db_con.get_booked_services({'filter':'ORDER BY timestamp DESC'})
     return jsonify(res)
 
-# @app.route('/drop_table/<tbl_name>') 
-# def drop_table(tbl_name): 
-#     res = db_con.drop_table(tbl_name)
-#     return jsonify(res)
-
 @app.route('/server-datetime') 
 def server_datetime(): 
     res = db_con.get_datetime()
