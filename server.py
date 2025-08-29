@@ -1,5 +1,5 @@
-#import sqlite3
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request
+import os
 import json
 import socket
 from global_variable import g_var
@@ -234,5 +234,6 @@ def mod_tbl_billings():
   
 if __name__ == '__main__': 
     host = socket.gethostbyname(socket.gethostname())
-    app.run(host=host, port=5000, debug = True)
+    port = os.environ.get('PORT', 5000)
+    app.run(host=host, port=port, debug = True)
     
