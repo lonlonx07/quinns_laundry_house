@@ -6,16 +6,24 @@ from global_variable import g_var
 from db_class import db_strg
 db_con = db_strg()
 app = Flask(__name__) 
+app.config['SECRET_KEY'] = "qlh-20080104"
 
 @app.route('/') 
 def home(): 
-    res = db_con.get_booked_services({'filter':'ORDER BY timestamp'})
-    return render_template("system.html", data=res)
+    #res = db_con.get_booked_services({'filter':'ORDER BY timestamp'})
+    #return render_template("system.html", data=res)
+    return "API access only"
 
 @app.route('/<filter>') 
 def filtered_booking(filter): 
-    res = db_con.get_booked_services({'filter':f'WHERE status=\'{filter}\''})
-    return render_template("system.html", data=res)
+    #res = db_con.get_booked_services({'filter':f'WHERE status=\'{filter}\''})
+    #return render_template("system.html", data=res)
+    return "API access only"
+
+@app.route('/active_bookings') 
+def active_bookings(): 
+    res = db_con.get_booked_services({'filter':'ORDER BY timestamp DESC'})
+    return jsonify(res)
 
 # @app.route('/drop_table/<tbl_name>') 
 # def drop_table(tbl_name): 
@@ -135,7 +143,7 @@ def get_user_booking(cnd):
     arr = json.loads(cnd)
     
     res = db_con.get_booking(arr)
-    return json.dumps(res)
+    return jsonify(res)
 
 @app.route('/get_booking_services/<cnd>', methods = ['GET']) 
 def get_booking_services(cnd): 
@@ -174,17 +182,55 @@ def set_threads(threads_data):
     res = db_con.set_booked_threads(arr)
     return jsonify(res) 
 
-@app.route('/map/') 
-def map(): 
-    return render_template("map.html") 
 
-#Admin route
-@app.route('/update_booking/', methods = ['POST']) 
-def update_booking(): 
-    arr = json.loads(request.data)
-    
-    res = db_con.update_client_booked(arr)
+# Admin route
+
+@app.route('/get_billing_payments', methods = ['GET']) 
+def get_billing_payments(): 
+    res = db_con.get_billing_payments()
     return jsonify(res) 
+
+@app.route('/get_rewards_list', methods = ['GET']) 
+def get_rewards_list(): 
+    res = db_con.get_rewards_list()
+    return jsonify(res) 
+
+@app.route('/get_booking_pack/<id>', methods = ['GET']) 
+def get_booking_pack(id): 
+    res = db_con.get_booking_pack(id)
+    return jsonify(res) 
+
+@app.route('/mod_tbl_bookings/', methods = ['POST']) 
+def mod_tbl_bookings(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_bookings(json_data['act'], json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
+@app.route('/mod_tbl_rewards/', methods = ['POST']) 
+def mod_tbl_rewards(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_rewards(json_data['act'], json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
+@app.route('/mod_tbl_billings/', methods = ['POST']) 
+def mod_tbl_billings(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_billings(json_data['act'], json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
+# Admin route
   
 if __name__ == '__main__': 
     host = socket.gethostbyname(socket.gethostname())

@@ -50,7 +50,7 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -124,7 +124,25 @@ class db_strg:
                 self.conn.rollback() 
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_book_tracking (booking_id INT, sched TEXT, accepted TEXT, pickup TEXT, drop_off TEXT, arrived TEXT, processing TEXT, outgoing TEXT, completed TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_book_tracking (booking_id INT, sched TEXT, accepted TEXT, pickup TEXT, drop_off TEXT, arrived TEXT, processing TEXT, outgoing TEXT, completed TEXT, cancelled TEXT);''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''ALTER TABLE tbl_book_tracking ADD COLUMN cancelled TEXT''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN gps_coordinate TEXT''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN logistics_fee NUMERIC''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -267,16 +285,18 @@ class db_strg:
         
         self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_earned WHERE user_id={id}")
         res_earned = self.cur.fetchone()['sum']
-        if res_earned != "None":
+        
+        if res_earned == "None":
             res_earned = 0
 
         self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_used WHERE user_id={id}")
         res_used = self.cur.fetchone()['sum']
-        if res_used != "None":
+        
+        if res_used == "None":
             res_used = 0
         
         return res_earned-res_used
-    
+
     def get_earned_points(self, id):
 
         self.cur.execute(f"SELECT * FROM tbl_pts_earned WHERE user_id={id}")
@@ -394,13 +414,88 @@ class db_strg:
         
         return res
     
-    def update_client_booked(self, arr):
-        res = "valid"
-        try:
-            self.cur.execute(f"UPDATE tbl_booking SET status='{arr['status']}' WHERE id={arr['booking_id']}")
-            self.conn.commit()
-        except:
-            res = "invalid"
-            self.conn.rollback()
-            
+    # Admin queries
+
+    def get_booking_pack(self, id):
+        self.cur.execute(f"SELECT * FROM tbl_booking_addon WHERE booking_id={id}")
+        res = self.cur.fetchall()
+
         return res
+
+    def mod_tbl_bookings(self, act, arr):
+        if act == "Update":
+            res = "valid"
+            try:
+                self.cur.execute(f"UPDATE tbl_booking SET quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
+                stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'ongoing','Completed':'completed','Cancelled':'cancelled'}
+                self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
+                if arr['status'] == "Completed":
+                    sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,status,timestamp,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','',0,'')"
+                    self.cur.execute(sql)
+                    #print((self.cur.fetchone())['id'])
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+
+        return res
+    
+    def get_rewards_list(self):
+        self.cur.execute(f"SELECT * FROM tbl_rewards ORDER BY pts_req DESC")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def mod_tbl_rewards(self, act, arr):
+        if act == "Add":
+            try:
+                sql = f"INSERT INTO tbl_rewards (title, description, pts_req, status) VALUES (\'{arr['title']}\', \'{arr['description']}\', \'{arr['pts_req']}\', \'{arr['status']}\') RETURNING id"
+                self.cur.execute(sql)
+                self.conn.commit()
+                res = (self.cur.fetchone())['id']
+            except:
+                res = "invalid"
+        elif act == "Update":
+            res = "valid"
+            try:
+                self.cur.execute(f"UPDATE tbl_rewards SET title='{arr['title']}', description='{arr['description']}', pts_req='{arr['pts_req']}', status='{arr['status']}' WHERE id={arr['id']}")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        elif act == "Delete":
+            res = "valid"
+            try:
+                self.cur.execute(f"DELETE FROM tbl_rewards WHERE id={arr['id']}")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+
+        return res
+    
+    def get_billing_payments(self):
+        self.cur.execute(f"""SELECT P.*, B.user_id FROM tbl_payments P 
+                         LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
+                         ORDER BY P.timestamp DESC""")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def mod_tbl_billings(self, act, arr):
+        if act == "Update":
+            res = "valid"
+            try:
+                self.cur.execute(f"UPDATE tbl_payments SET mode='{arr['mode']}', ref_num='{arr['ref_num']}', amount='{arr['amount']}', status='{arr['status']}' WHERE id={arr['id']}")
+                if arr['status'] == "Paid":
+                    sql = f"INSERT INTO tbl_pts_earned (user_id,amount,source,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
+                    #sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
+                    self.cur.execute(sql)
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+
+        return res
+    
+    # Admin queries
