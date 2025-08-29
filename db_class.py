@@ -275,13 +275,13 @@ class db_strg:
         self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_earned WHERE user_id={id}")
         res_earned = self.cur.fetchone()['sum']
         
-        if res_earned == "None":
+        if res_earned == None:
             res_earned = 0
 
         self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_used WHERE user_id={id}")
         res_used = self.cur.fetchone()['sum']
         
-        if res_used == "None":
+        if res_used == None:
             res_used = 0
         
         return res_earned-res_used
