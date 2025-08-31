@@ -2,7 +2,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor # Or DictCursor
 import random
 from datetime import datetime
-import hashlib
 
 # x = datetime.now()
 # print(x.strftime("%c"))
@@ -152,11 +151,6 @@ class db_strg:
         except:
             print("Database connection error!")  
 
-    def get_hash_value(self, val):
-        h = hashlib.new("SHA256")
-        h.update(val.encode(encoding='utf-8'))
-        return h.hexdigest()
-
     def gen_rand_num_codes(self, len):
         i=0
         code = ""
@@ -184,7 +178,7 @@ class db_strg:
         return res
 
     def create_user(self, arr):
-        sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{self.get_hash_value(arr['upass'])}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
+        sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
         try:
             self.cur.execute(sql)
             id = (self.cur.fetchone())['id']
@@ -227,7 +221,7 @@ class db_strg:
         return res 
     
     def validate_user(self, arr):
-        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{self.get_hash_value(arr['upass'])}'")
+        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{arr['upass']}'")
         res = self.cur.fetchone()
         if res == None:
             res = "invalid"
