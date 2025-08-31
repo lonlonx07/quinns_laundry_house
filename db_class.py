@@ -374,17 +374,6 @@ class db_strg:
             
         return res
     
-    def set_custom_update(self, arr):
-        res = "valid"
-        try:
-            self.cur.execute(arr['sql'])
-            self.conn.commit()
-        except:
-            res = "invalid"
-            self.conn.rollback()
-
-        return res
-    
     # new mod
     
     def get_booked_services(self, arr):

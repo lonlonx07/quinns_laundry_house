@@ -119,15 +119,6 @@ def points_reward(status):
 def update_field(data): 
     arr = json.loads(data)
     res = db_con.set_update_field(arr)
-    if res != "invalid":
-        return jsonify(res)
-    else:
-        return res
-    
-@app.route('/custom_update/<sql>', methods = ['POST']) 
-def custom_update(sql): 
-    arr = json.loads(sql)
-    res = db_con.set_custom_update(arr)
     
     return res
 
