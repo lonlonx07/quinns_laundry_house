@@ -4,3 +4,4 @@ opencv-python==4.9.0.80
 numpy==1.26.4
 websockets==14.1
 psycopg2-binary==2.9.10
+requests==2.31.0
