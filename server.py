@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+import requests
 import os
 import json
 import socket
@@ -7,6 +8,40 @@ from db_class import db_strg
 db_con = db_strg()
 app = Flask(__name__) 
 app.config['SECRET_KEY'] = "qlh-20080104"
+
+ONESIGNAL_APP_ID = "21c4382a-793b-49bd-a895-51f164ccd7ba"
+ONESIGNAL_REST_API_KEY = "os_v2_app_ehcdqktzhne33kevkhywjtgxxljyjzhzhijuynvo7pqk3xnvcjc5yvum6gp4en7aoyymhg4alurmytzmh7itfjhwf2o73kq3bmrm4lq"
+
+@app.route('/send_otp', methods=['POST'])
+def send_otp():
+    data = request.get_json()
+    phone_number = data.get('phone_number')
+    message = data.get('message')
+
+    if not phone_number or not message:
+        return jsonify({"error": "Phone number and message are required"}), 400
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Basic {ONESIGNAL_REST_API_KEY}"
+    }
+
+    payload = {
+        "app_id": ONESIGNAL_APP_ID,
+        "contents": {"en": message},
+        "include_phone_numbers": [phone_number]
+    }
+
+    try:
+        response = requests.post(
+            "https://onesignal.com/api/v1/notifications",
+            headers=headers,
+            json=payload
+        )
+        response.raise_for_status()  # Raise an exception for bad status codes
+        return jsonify({"message": "SMS sent successfully", "response": response.json()}), 200
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Failed to send SMS: {e}"}), 500
 
 @app.route('/') 
 def home(): 
@@ -19,6 +54,12 @@ def filtered_booking(filter):
     #res = db_con.get_booked_services({'filter':f'WHERE status=\'{filter}\''})
     #return render_template("system.html", data=res)
     return "API access only"
+
+@app.route('/notification/<id>', methods = ['GET']) 
+def notification(id): 
+    res = db_con.get_user_notification(id)
+    
+    return res
 
 @app.route('/active_bookings') 
 def active_bookings(): 
@@ -180,9 +221,9 @@ def set_threads(threads_data):
 
 # Admin route
 
-@app.route('/get_billing_payments', methods = ['GET']) 
-def get_billing_payments(): 
-    res = db_con.get_billing_payments()
+@app.route('/get_billing_payments/<id>', methods = ['GET']) 
+def get_billing_payments(id): 
+    res = db_con.get_billing_payments(id)
     return jsonify(res) 
 
 @app.route('/get_rewards_list', methods = ['GET']) 

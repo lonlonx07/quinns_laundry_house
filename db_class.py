@@ -2,12 +2,14 @@ import psycopg2
 from psycopg2.extras import RealDictCursor # Or DictCursor
 import random
 from datetime import datetime
+import hashlib
 
 # x = datetime.now()
 # print(x.strftime("%c"))
 
 class db_strg:
     otp_list = {}
+    ntfy_list = {}
 
     def __init__(self) -> None:
         creden_arr = {}
@@ -150,6 +152,11 @@ class db_strg:
         except:
             print("Database connection error!")  
 
+    def get_hash_value(self, val):
+        h = hashlib.new("SHA256")
+        h.update(val.encode(encoding='utf-8'))
+        return h.hexdigest()
+
     def gen_rand_num_codes(self, len):
         i=0
         code = ""
@@ -165,8 +172,19 @@ class db_strg:
 
         return dt_now       
 
+    def get_user_notification(self, id):
+        res = ""
+        try:
+            id = int(id)
+            res = self.ntfy_list[id]
+            self.ntfy_list[id] = ""
+        except:
+            pass
+        
+        return res
+
     def create_user(self, arr):
-        sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
+        sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{self.get_hash_value(arr['upass'])}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
         try:
             self.cur.execute(sql)
             id = (self.cur.fetchone())['id']
@@ -209,7 +227,7 @@ class db_strg:
         return res 
     
     def validate_user(self, arr):
-        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{arr['upass']}'")
+        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{self.get_hash_value(arr['upass'])}'")
         res = self.cur.fetchone()
         if res == None:
             res = "invalid"
@@ -423,6 +441,10 @@ class db_strg:
                     self.cur.execute(sql)
                     #print((self.cur.fetchone())['id'])
                 self.conn.commit()
+
+                self.ntfy_list[arr['uid']] = {} 
+                self.ntfy_list[arr['uid']]['title'] = "Laundry Update Status"
+                self.ntfy_list[arr['uid']]['msg'] = arr['status']
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -463,11 +485,18 @@ class db_strg:
 
         return res
     
-    def get_billing_payments(self):
-        self.cur.execute(f"""SELECT P.*, B.user_id FROM tbl_payments P 
-                         LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
-                         ORDER BY P.timestamp DESC""")
-        res = self.cur.fetchall()
+    def get_billing_payments(self, id):
+        if id == "all":
+            self.cur.execute(f"""SELECT P.*, B.mode, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
+                            LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
+                            ORDER BY P.timestamp DESC""")
+            res = self.cur.fetchall()
+        else:
+            self.cur.execute(f"""SELECT BA.*, B.quantity, B.unit FROM tbl_payments P 
+                            LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
+                            LEFT OUTER JOIN tbl_booking_addon BA ON P.booking_id=BA.booking_id 
+                            WHERE P.id={id} ORDER BY P.timestamp DESC""")
+            res = self.cur.fetchall()
         
         return res
     
