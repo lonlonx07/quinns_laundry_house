@@ -135,12 +135,29 @@ def signin(creden):
 def signup(creden): 
     arr = json.loads(creden)
     res = db_con.create_user(arr)
-    return jsonify(res)
+    if res != "exist" and res != "invalid":
+        return jsonify(res)
+    else:
+        return res
 
 @app.route('/validate_otp/<creden>', methods = ['POST']) 
 def validate_otp(creden): 
     arr = json.loads(creden)
     res = db_con.check_otp(arr)
+    return res
+
+@app.route('/request_reset_password/<uname>', methods = ['POST']) 
+def request_reset_password(uname): 
+    res = db_con.request_reset_password(uname)
+    if res != "invalid":
+        return jsonify(res)
+    else:
+        return res
+
+@app.route('/reset_password/<creden>', methods = ['POST']) 
+def reset_password(creden): 
+    arr = json.loads(creden)
+    res = db_con.reset_password(arr)
     return res
 
 @app.route('/get_otp/<creden>', methods = ['POST']) 

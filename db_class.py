@@ -178,17 +178,22 @@ class db_strg:
         return res
 
     def create_user(self, arr):
-        sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
-        try:
-            self.cur.execute(sql)
-            id = (self.cur.fetchone())['id']
-            self.conn.commit()
-            self.otp_list[id] = self.gen_rand_num_codes(4)
-            res = id
-        except:
-            res = "invalid"
-            self.conn.rollback()
-            
+        self.cur.execute(f"SELECT id from tbl_users WHERE user_name='{arr['uname']}'")
+        res = self.cur.fetchone()
+        if res == None:
+            sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
+            try:
+                self.cur.execute(sql)
+                id = (self.cur.fetchone())['id']
+                self.conn.commit()
+                self.otp_list[id] = self.gen_rand_num_codes(4)
+                res = id
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        else:
+            res = "exist"
+
         return res 
     
     def create_booking(self, arr):
@@ -228,6 +233,29 @@ class db_strg:
         else:
             if res['status'] == "Pending":
                 self.otp_list[res[id]] = self.gen_rand_num_codes(4)
+            
+        return res
+    
+    def request_reset_password(self, user_name):
+        self.cur.execute(f"SELECT id from tbl_users WHERE user_name='{user_name}'")
+        res = self.cur.fetchone()
+        if res == None:
+            res = "invalid"
+
+        return res
+    
+    def reset_password(self, arr):
+        if self.otp_list[arr['user_id']] == arr['otp']:
+            try:
+                res = self.cur.execute(f"UPDATE tbl_users SET password='{arr['upass']}' WHERE id={arr['user_id']}")
+                self.conn.commit()
+                self.otp_list.pop(arr['user_id'])
+                res = "valid"
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        else:
+            res = "invalid"
         
         return res
     
