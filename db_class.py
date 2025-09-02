@@ -1,14 +1,20 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor # Or DictCursor
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
+import firebase_admin
+from firebase_admin import credentials, messaging
+cred = credentials.Certificate("quinns-laundry-house-5d121-firebase-adminsdk-fbsvc-ff4edb7c60.json")
+firebase_admin.initialize_app(cred)
 
-# x = datetime.now()
-# print(x.strftime("%c"))
+import pytz
+UTC = pytz.utc
+ph_tz = pytz.timezone('Asia/Manila')
 
 class db_strg:
     otp_list = {}
     ntfy_list = {}
+    client_ntfy_tok = {}
 
     def __init__(self) -> None:
         creden_arr = {}
@@ -161,7 +167,7 @@ class db_strg:
         return code   
 
     def get_datetime(self):
-        dt_now = datetime.now()
+        dt_now = datetime.now(ph_tz)
         dt_now = dt_now.strftime("%Y-%m-%d %H:%M:%S")
 
         return dt_now       
@@ -176,6 +182,32 @@ class db_strg:
             pass
         
         return res
+    
+    def set_notification_token(self, data):
+        self.client_ntfy_tok[data['id']] = data['token_id']
+
+    def send_notification(self, data):
+        try:
+            message = messaging.Message(
+                notification=messaging.Notification(
+                    title=data['title'], #Notification Title
+                    body=data['msg'], #Body
+                ),
+                token=self.client_ntfy_tok[data['id']], #DEVICE_REGISTRATION_TOKEN
+            )
+            messaging.send(message)
+        except:
+            pass
+
+        # message = messaging.Message(
+        #     notification=messaging.Notification(
+        #         title="Topic Notification",
+        #         body="Important update for all subscribers!",
+        #     ),
+        #     topic="your_topic_name",
+        # )
+        # response = messaging.send(message)
+        # print(f"Successfully sent message to topic: {response}")
 
     def create_user(self, arr):
         self.cur.execute(f"SELECT id from tbl_users WHERE user_name='{arr['uname']}'")
@@ -447,11 +479,17 @@ class db_strg:
                 self.cur.execute(f"UPDATE tbl_booking SET quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
                 stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'ongoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
+                
+                self.send_notification({'id':arr['uid'], 'title':"Booking Status", 'msg':arr['status']})
+                
                 if arr['status'] == "Completed":
-                    sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,status,timestamp,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','',0,'')"
-                    self.cur.execute(sql)
+                    self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
+                    res = self.cur.fetchone()
+                    if res == None:
+                        sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,status,timestamp,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','',0,'')"
+                        self.cur.execute(sql)
                     #print((self.cur.fetchone())['id'])
-                self.conn.commit()
+                #self.conn.commit()
 
                 self.ntfy_list[arr['uid']] = {} 
                 self.ntfy_list[arr['uid']]['title'] = "Laundry Update Status"
@@ -498,7 +536,7 @@ class db_strg:
     
     def get_billing_payments(self, id):
         if id == "all":
-            self.cur.execute(f"""SELECT P.*, B.mode, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
+            self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
                             LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
                             ORDER BY P.timestamp DESC""")
             res = self.cur.fetchall()

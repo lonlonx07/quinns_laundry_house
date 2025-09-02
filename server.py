@@ -42,6 +42,12 @@ def send_otp():
         return jsonify({"message": "SMS sent successfully", "response": response.json()}), 200
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Failed to send SMS: {e}"}), 500
+    
+@app.route('/ntfy_reg_device/<data>', methods = ['POST'])
+def ntfy_reg_device(data):
+    arr = json.loads(data)
+    res = db_con.set_notification_token(arr)
+    return f"Device token: {arr['token_id']}"
 
 @app.route('/') 
 def home(): 
