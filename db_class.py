@@ -4,7 +4,7 @@ import random
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, messaging
-cred = credentials.Certificate("quinnslaundryhouse_token.json")
+cred = credentials.Certificate("quinns-laundry-house-5d121-firebase-adminsdk-fbsvc-d3528a0c5b.json")
 firebase_admin.initialize_app(cred)
 
 import pytz
@@ -195,9 +195,15 @@ class db_strg:
                 ),
                 token=self.client_ntfy_tok[data['id']], #DEVICE_REGISTRATION_TOKEN
             )
-            messaging.send(message)
+            messaging.send(message)  
         except:
             pass
+
+        # try:
+        #     response = messaging.send(message)
+        #     print("Successfully sent message:", response)
+        # except Exception as e:
+        #     print("Error sending message:", e)
 
         # message = messaging.Message(
         #     notification=messaging.Notification(
@@ -480,7 +486,7 @@ class db_strg:
                 stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'ongoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
                 
-                self.send_notification({'id':arr['uid'], 'title':"Booking Status", 'msg':arr['status']})
+                self.send_notification({'id':arr['uid'], 'title':"Quinns Laundry House", 'msg':f"Booking Status Update: {arr['status']}"})
                 
                 if arr['status'] == "Completed":
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
@@ -489,7 +495,7 @@ class db_strg:
                         sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,status,timestamp,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','',0,'')"
                         self.cur.execute(sql)
                     #print((self.cur.fetchone())['id'])
-                #self.conn.commit()
+                self.conn.commit()
 
                 self.ntfy_list[arr['uid']] = {} 
                 self.ntfy_list[arr['uid']]['title'] = "Laundry Update Status"
