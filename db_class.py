@@ -4,7 +4,7 @@ import random
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, messaging
-cred = credentials.Certificate("quinns-laundry-house-5d121-firebase-adminsdk-fbsvc-ff4edb7c60.json")
+cred = credentials.Certificate("quinnslaundryhouse_token.json")
 firebase_admin.initialize_app(cred)
 
 import pytz

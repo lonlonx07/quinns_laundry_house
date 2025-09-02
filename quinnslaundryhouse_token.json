@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "quinns-laundry-house-5d121",
+  "private_key_id": "ff4edb7c6042c27231e7d623c564d235dc37db50",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDX7G6su4xssHxT\nszlwiHBX9KtUvlz4M8uQDOIEwzVi66SQ1286FRXsHreg7bsNnLPVARGnmODIYTKQ\nOqMWuB9nDzMwa8AVOymHgxX/CUrUi07vaGlk3jivXymgbmB65pTPYl6o0IPmBcbC\ns36QTmh5KQVwUaoeZHVlYNmCmSBRF/0UNUrLmwqmQxZddL2t/tUWdqpIlYU2M1tD\nYeed8XMRUSO8P2Jij87/yjkKaDC9yFEe0Uvmsg0rLrCP11hhl4hSGgNjpOgjSilJ\nSPA8hu70LWBq77HdSY6fJNe2OJaKFNXPddzL9MPFFaoNQKvBYNTPJyMyVmXFk3HM\nBm3N6eztAgMBAAECggEALwDqhNKc+ooevm+8+MjSv+rkoyF/ho5r6VNMnmHKTNrk\nK52iOmAdshVrvu4RcqCiqyM87yGCCUzTX39MQmVZfKtb5tYF7fk/jJ7WGnsw3Xzn\n9YjirJENgOuz2Zc9jHOGgHC3D4O4usmWH4tIaWyQJJPv+aflYxFWVvfS0bG4zb4H\nFi00EKOq6F66jCvF7wTaLmR6uw/YvcY4PHHUOreo9BZnrH4gJ3jrP3T2QWavmBCJ\nvEFPXy4x3YrEl+WKAp+7+gRne2mIDZa8UdmwySm0WPo+A1GqjKAIKNe4bsn3Npu7\n2da63mQC87qokHMDWbpUjw2+FyDYH1LX8VrvD38SoQKBgQD4iNBjxr2bP32Cz/MX\n6n15Hj7HXGFf7C0uEVjQcNTRqD+LDmx+l6qzzKU3x1Cg5Fs0oKoCKs6+O9JFKAGi\nNTFNFztyhrdKhs8AyngP4WTfEZ/8oSa4euHmMyTp1aW9vvf2bLw7TNFgjsnE49U3\nNgbQ7KzB6DAYc1eiN2fGtokVvQKBgQDeaNizV7xc/8LSzHUqXZhui95llQeaVin+\nK35jYlYMde/tszzPuGSqyn2XYE5fUuokAZEH0PrlJB+T2UZ3GxjIXXMrlKPWx3O9\na9JmMegVmM8sVK2srU1h8Ic9sU0275yyyMEHca6p7PTxDEALArQrmymjSBG7ypFP\nVIsfPM6u8QKBgA3QtRzGwGVv2w85df7fVwgziTPVy8fkPgKwjipQC1R4MMgPDjLf\nRWrnNkvqdW3sI7HCOJEURhfHBYI4nhahNFNftjtAh9HJupoFpzTix5OqzCTj5F4e\n3o3ITAX/jU4F3ozBMJlvRLhEV6ztKT3/b9OPRG8m8/138+gdglRGc0pVAoGBALrV\nfOT7mQLO38zRcMOMKJcE7GiNTvu50kDwLJY0b3C8Sjd2UGl2zyoiPGrDvlKZhpOE\ntV7JkVqYg+Zhqa44lxMKXcuIbDHrDzFauD6dQgeSfMcSw2rBkrXpptKOdPznQM13\nk6A7Qa0Bn6o2zj3xoYTYLZw62JrWykbIEK7HGCEhAoGBAKgNZ1jA87ohjjfw32cn\np7rh2TqHE8sO2m0hYnPBqNLE2c8vpt/uljvA1c1IMSjEVAd44/K/Sk58XSlfuUNZ\ngB82IsOlzYLY1KIQ5aR5zEk0yXoEAHmhFFXoXen3cVOLs5IAGBBf3aWNycYDTy8/\neDHo/3hOwLyUTp8iNL1hatLb\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@quinns-laundry-house-5d121.iam.gserviceaccount.com",
+  "client_id": "117370442900356218054",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40quinns-laundry-house-5d121.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
