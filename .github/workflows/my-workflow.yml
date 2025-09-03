@@ -14,5 +14,5 @@ jobs:
 
       - name: Run Python script with environment variable
         env:
-          SERVICE_ACCOUNT_KEY: eyJ0eXBlIjogbnVsbCwgInByb2plY3RfaWQiOiBudWxsLCAicHJpdmF0ZV9rZXlfaWQiOiBudWxsLCAicHJpdmF0ZV9rZXkiOiBudWxsLCAiY2xpZW50X2VtYWlsIjogbnVsbCwgImNsaWVudF9pZCI6IG51bGwsICJhdXRoX3VyaSI6IG51bGwsICJ0b2tlbl91cmkiOiBudWxsLCAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogbnVsbCwgImNsaWVudF94NTA5X2NlcnRfdXJsIjogbnVsbCwgInVuaXZlcnNlX2RvbWFpbiI6IG51bGx9
+          SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
         run: python server.py
