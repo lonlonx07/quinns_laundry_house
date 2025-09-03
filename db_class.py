@@ -27,6 +27,7 @@ class db_strg:
     otp_list = {}
     ntfy_list = {}
     client_ntfy_tok = {}
+    client_ntfy_dat = {}
 
     def __init__(self) -> None:
         creden_arr = {}
@@ -169,6 +170,15 @@ class db_strg:
         except:
             print("Database connection error!")  
 
+    def format_std_code(self, code, num, max_len):
+        res = ""
+        ctr = len(num)
+        while ctr < max_len:
+            res += "0"
+            ctr += 1
+
+        return code+res+num
+
     def gen_rand_num_codes(self, len):
         i=0
         code = ""
@@ -184,12 +194,11 @@ class db_strg:
 
         return dt_now       
 
-    def get_user_notification(self, id):
+    def get_user_notification(self, uid):
         res = ""
         try:
-            id = int(id)
-            res = self.ntfy_list[id]
-            self.ntfy_list[id] = ""
+            res = self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]]
+            self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]] = ""
         except:
             pass
         
@@ -198,18 +207,28 @@ class db_strg:
     def set_notification_token(self, data):
         self.client_ntfy_tok[data['id']] = data['token_id']
 
-    def send_notification(self, data):
+        # try:
+        #     self.client_ntfy_dat[self.client_ntfy_tok[data['id']]]
+        #     self.send_notification(data['id'])
+        # except:
+        #     pass
+
+    def send_notification(self, uid):
         try:
-            #print(self.client_ntfy_tok[data['id']])
             message = messaging.Message(
                 notification=messaging.Notification(
-                    title=data['title'], #Notification Title
-                    body=data['msg'], #Body
+                    title="Quinns Laundry House", #Notification Title
+                    body=self.client_ntfy_dat[self.client_ntfy_tok[uid]]['content'], #Body
                 ),
-                token=self.client_ntfy_tok[data['id']], #DEVICE_REGISTRATION_TOKEN
+                data={
+                    'data1':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['data1'],
+                },
+                token=self.client_ntfy_tok[uid], #DEVICE_REGISTRATION_TOKEN
             )
             response = messaging.send(message)  
-            print("Successfully sent message:", response)
+            #print("Successfully sent message:", response)
+            del self.client_ntfy_dat[self.client_ntfy_tok[uid]]
+
         except Exception as e:
             print("Error sending notification", e)            
 
@@ -494,8 +513,6 @@ class db_strg:
                 stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'ongoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
                 
-                self.send_notification({'id':arr['uid'], 'title':"Quinns Laundry House", 'msg':f"Booking Status Update: {arr['status']}"})
-                
                 if arr['status'] == "Completed":
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
                     res = self.cur.fetchone()
@@ -504,14 +521,18 @@ class db_strg:
                         self.cur.execute(sql)
                     #print((self.cur.fetchone())['id'])
                 self.conn.commit()
-
-                self.ntfy_list[arr['uid']] = {} 
-                self.ntfy_list[arr['uid']]['title'] = "Laundry Update Status"
-                self.ntfy_list[arr['uid']]['msg'] = arr['status']
             except:
                 res = "invalid"
                 self.conn.rollback()
 
+            try:
+                self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
+                self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} Status: {arr['status']}"
+                self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['data1'] = str(arr['booking_id'])
+                self.send_notification(arr['uid'])
+            except:
+                pass
+        
         return res
     
     def get_rewards_list(self):
