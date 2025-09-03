@@ -2,9 +2,20 @@ import psycopg2
 from psycopg2.extras import RealDictCursor # Or DictCursor
 import random
 from datetime import datetime, timedelta
+import os
+import json
+import base64
 import firebase_admin
 from firebase_admin import credentials, messaging
-cred = credentials.Certificate("serviceAccountKey.json")
+#cred = credentials.Certificate("serviceAccountKey.json")
+#firebase_admin.initialize_app(cred)
+
+encoded_key = os.getenv("SERVICE_ACCOUNT_JSON")
+if not encoded_key:
+    raise ValueError("The SERVICE_ACCOUNT_JSON environment variable is not set.")
+
+service_account_info = json.loads(base64.b64decode(encoded_key).decode('utf-8'))
+cred = credentials.Certificate(service_account_info)
 firebase_admin.initialize_app(cred)
 
 import pytz
