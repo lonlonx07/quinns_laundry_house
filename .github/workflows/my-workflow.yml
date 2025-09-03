@@ -1,0 +1,22 @@
+name: Deploy to Firebase
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+
+      - name: Set up Service Account
+        env:
+          GCP_SA_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+        run: |
+          echo $GCP_SA_KEY > gcloud-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$GITHUB_WORKSPACE/gcloud-key.json
+
+      - name: Install dependencies and run script
+        run: |
+          pip install firebase-admin
+          python your_script.py
