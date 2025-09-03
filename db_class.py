@@ -7,15 +7,25 @@ import json
 import base64
 import firebase_admin
 from firebase_admin import credentials, messaging
-cred = credentials.Certificate("serviceAccountKey.json")
+# cred = credentials.Certificate("quinns-laundry-house-5d121-cad4a86b8589.json")
+# firebase_admin.initialize_app(cred)
+
+encoded_key = os.getenv("SERVICE_ACCOUNT_JSON")
+if not encoded_key:
+    raise ValueError("The SERVICE_ACCOUNT_JSON environment variable is not set.")
+
+service_account_info = json.loads(base64.b64decode(encoded_key).decode('utf-8'))
+cred = credentials.Certificate(service_account_info)
 firebase_admin.initialize_app(cred)
 
-# encoded_key = os.getenv("SERVICE_ACCOUNT_JSON")
-# if not encoded_key:
-#     raise ValueError("The SERVICE_ACCOUNT_JSON environment variable is not set.")
+# with open("serviceAccountKey.json", 'r') as file:
+#     ServAccKey_data = json.load(file)
 
+# json_string = json.dumps(ServAccKey_data)
+# json_bytes = json_string.encode('utf-8')
+# base64_bytes = base64.b64encode(json_bytes)
 # service_account_info = json.loads(base64.b64decode(encoded_key).decode('utf-8'))
-# cred = credentials.Certificate(service_account_info)
+# cred = credentials.Certificate(json.dumps(ServAccKey_data))
 # firebase_admin.initialize_app(cred)
 
 import pytz
