@@ -4,19 +4,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12.10'
 
-      - name: Set up Service Account
+      - name: Run Python script with environment variable
         env:
-          GCP_SA_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
-        run: |
-          echo $GCP_SA_KEY > gcloud-key.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$GITHUB_WORKSPACE/gcloud-key.json
-
-      - name: Install dependencies and run script
-        run: |
-          pip install firebase-admin
-          python server.py
+          SERVICE_ACCOUNT_KEY: eyJ0eXBlIjogbnVsbCwgInByb2plY3RfaWQiOiBudWxsLCAicHJpdmF0ZV9rZXlfaWQiOiBudWxsLCAicHJpdmF0ZV9rZXkiOiBudWxsLCAiY2xpZW50X2VtYWlsIjogbnVsbCwgImNsaWVudF9pZCI6IG51bGwsICJhdXRoX3VyaSI6IG51bGwsICJ0b2tlbl91cmkiOiBudWxsLCAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogbnVsbCwgImNsaWVudF94NTA5X2NlcnRfdXJsIjogbnVsbCwgInVuaXZlcnNlX2RvbWFpbiI6IG51bGx9
+        run: python server.py
