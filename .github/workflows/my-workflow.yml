@@ -19,4 +19,4 @@ jobs:
       - name: Install dependencies and run script
         run: |
           pip install firebase-admin
-          python your_script.py
+          python server.py
