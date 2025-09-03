@@ -4,7 +4,7 @@ import random
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, messaging
-cred = credentials.Certificate("quinns-laundry-house-5d121-firebase-adminsdk-fbsvc-d3528a0c5b.json")
+cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 import pytz
@@ -188,6 +188,7 @@ class db_strg:
 
     def send_notification(self, data):
         try:
+            #print(self.client_ntfy_tok[data['id']])
             message = messaging.Message(
                 notification=messaging.Notification(
                     title=data['title'], #Notification Title
@@ -195,15 +196,10 @@ class db_strg:
                 ),
                 token=self.client_ntfy_tok[data['id']], #DEVICE_REGISTRATION_TOKEN
             )
-            messaging.send(message)  
-        except:
-            pass
-
-        # try:
-        #     response = messaging.send(message)
-        #     print("Successfully sent message:", response)
-        # except Exception as e:
-        #     print("Error sending message:", e)
+            response = messaging.send(message)  
+            print("Successfully sent message:", response)
+        except Exception as e:
+            print("Error sending notification", e)            
 
         # message = messaging.Message(
         #     notification=messaging.Notification(
