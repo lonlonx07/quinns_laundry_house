@@ -357,7 +357,7 @@ class db_strg:
     
     def get_services(self, id):
         if id == "all":
-            self.cur.execute(f"SELECT * FROM tbl_services")
+            self.cur.execute(f"SELECT * FROM tbl_services ORDER BY id ASC")
             res = self.cur.fetchall()
         else:
             self.cur.execute(f"SELECT * FROM tbl_services WHERE id={id}")
@@ -367,7 +367,7 @@ class db_strg:
     
     def get_addons(self, id):
         if id == "all":
-            self.cur.execute(f"SELECT * FROM tbl_addons")
+            self.cur.execute(f"SELECT * FROM tbl_addons ORDER BY id ASC")
             res = self.cur.fetchall()
         else:
             self.cur.execute(f"SELECT * FROM tbl_addons WHERE id={id}")
@@ -499,6 +499,37 @@ class db_strg:
     
     # Admin queries
 
+    def get_threads_admin(self):
+        self.cur.execute(f"""
+                         SELECT DISTINCT T.id, T.*, U.first_name, U.last_name FROM tbl_threads T 
+                         LEFT OUTER JOIN tbl_thread_messages TM ON T.id=TM.thread_id 
+                         LEFT OUTER JOIN tbl_users U ON CAST(TM.sender AS INT)=U.id 
+                         WHERE T.status='Open' AND sender<>'0' ORDER BY T.timestamp DESC""")
+        res = self.cur.fetchall()
+
+        return res
+    
+    def get_thread_messages_admin(self, id):
+        self.cur.execute(f"""
+                         SELECT DISTINCT TM.* FROM tbl_threads T 
+                         LEFT OUTER JOIN tbl_thread_messages TM ON T.id=TM.thread_id 
+                         LEFT OUTER JOIN tbl_users U ON CAST(TM.sender AS INT)=U.id 
+                         WHERE T.id={id} AND T.status='Open' ORDER BY TM.timestamp DESC""")
+        res = self.cur.fetchall()
+
+        return res
+    
+    def set_thread_reply_admin(self, arr):
+        res = "valid"
+        try:
+            sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp) VALUES (\'{arr['thread_id']}\', \'{arr['sender_id']}\', \'{arr['message']}\', \'{self.get_datetime()}\')"
+            self.cur.execute(sql)
+            self.conn.commit()
+        except:
+            res = "invalid"
+
+        return res
+
     def get_booking_pack(self, id):
         self.cur.execute(f"SELECT * FROM tbl_booking_addon WHERE booking_id={id}")
         res = self.cur.fetchall()
@@ -582,6 +613,30 @@ class db_strg:
                             WHERE P.id={id} ORDER BY P.timestamp DESC""")
             res = self.cur.fetchall()
         
+        return res
+    
+    def mod_tbl_services(self, act, arr):
+        if act == "Update":
+            res = "valid"
+            try:
+                self.cur.execute(f"UPDATE tbl_services SET sub_title='{arr['sub_title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}' WHERE id={arr['id']}")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+
+        return res
+    
+    def mod_tbl_addons(self, act, arr):
+        if act == "Update":
+            res = "valid"
+            try:
+                self.cur.execute(f"UPDATE tbl_addons SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', status='{arr['status']}' WHERE id={arr['id']}")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+
         return res
     
     def mod_tbl_billings(self, act, arr):

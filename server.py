@@ -235,6 +235,26 @@ def set_threads(threads_data):
 
 # Admin route
 
+@app.route('/get_threads_admin', methods = ['GET']) 
+def get_threads_admin(): 
+    res = db_con.get_threads_admin()
+    return jsonify(res) 
+
+@app.route('/get_thread_messages_admin/<id>', methods = ['GET']) 
+def get_thread_messages_admin(id): 
+    res = db_con.get_thread_messages_admin(id)
+    return jsonify(res) 
+
+@app.route('/set_thread_reply_admin/', methods = ['POST']) 
+def set_thread_reply_admin(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.set_thread_reply_admin(json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
 @app.route('/get_billing_payments/<id>', methods = ['GET']) 
 def get_billing_payments(id): 
     res = db_con.get_billing_payments(id)
@@ -265,6 +285,26 @@ def mod_tbl_rewards():
     json_data = request.get_json()
     if json_data['tok'] == app.config['SECRET_KEY']:
         res = db_con.mod_tbl_rewards(json_data['act'], json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
+@app.route('/mod_tbl_services/', methods = ['POST']) 
+def mod_tbl_services(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_services(json_data['act'], json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
+@app.route('/mod_tbl_addons/', methods = ['POST']) 
+def mod_tbl_addons(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_addons(json_data['act'], json_data['data'])
     else:
         res = {"res":"invalid"}
     
