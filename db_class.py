@@ -198,7 +198,7 @@ class db_strg:
         res = ""
         try:
             res = self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]]
-            self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]] = ""
+            #self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]] = ""
         except:
             pass
         
@@ -221,7 +221,10 @@ class db_strg:
                     body=self.client_ntfy_dat[self.client_ntfy_tok[uid]]['content'], #Body
                 ),
                 data={
-                    'data1':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['data1'],
+                    'title':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['title'],
+                    'type':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['type'],
+                    'msg':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['msg'],
+                    'id':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['id'],
                 },
                 token=self.client_ntfy_tok[uid], #DEVICE_REGISTRATION_TOKEN
             )
@@ -528,6 +531,24 @@ class db_strg:
         except:
             res = "invalid"
 
+        # if res == "valid":
+        #     try:
+        #         ntfy_msg = ""
+        #         if arr['message'] != "":
+        #             ntfy_msg = arr['status']
+
+        #         if ntfy_msg != "":
+        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
+        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = "Admin replied to your thread"
+        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "message"
+        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Admin Reply"
+        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = ntfy_msg
+        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['thread_id'])
+        #             self.send_notification(arr['uid'])
+
+        #     except:
+        #         pass
+
         return res
 
     def get_booking_pack(self, id):
@@ -557,10 +578,19 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
-                self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} Status: {arr['status']}"
-                self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['data1'] = str(arr['booking_id'])
-                self.send_notification(arr['uid'])
+                ntfy_msg = ""
+                if arr['status'] != "" and arr['status'] != "Pending":
+                    ntfy_msg = arr['status']
+
+                if ntfy_msg != "":
+                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
+                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} update."
+                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "booking"
+                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update" #f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} Status: {arr['status']}"
+                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = ntfy_msg
+                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
+                    self.send_notification(arr['uid'])
+
             except:
                 pass
         
