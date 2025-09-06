@@ -235,6 +235,21 @@ def set_threads(threads_data):
 
 # Admin route
 
+@app.route('/get_shop', methods = ['GET']) 
+def get_shop(): 
+    res = db_con.get_shop()
+    return jsonify(res) 
+
+@app.route('/mod_tbl_shop/', methods = ['POST']) 
+def mod_tbl_shop(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_shop(json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
 @app.route('/get_threads_admin', methods = ['GET']) 
 def get_threads_admin(): 
     res = db_con.get_threads_admin()

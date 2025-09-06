@@ -149,20 +149,49 @@ class db_strg:
             except:
                 self.conn.rollback()
 
+            try:
+                self.cur.execute('''CREATE TABLE tbl_shop (shop_name TEXT, address TEXT, contact TEXT, fb_page TEXT, logistics NUMERIC, free_threshold NUMERIC, 
+                                 sunday TEXT, sun_stat TEXT,
+                                 monday TEXT, mon_stat TEXT,
+                                 tuesday TEXT, tue_stat TEXT,
+                                 wednesday TEXT, wed_stat TEXT,
+                                 thursday TEXT, thu_stat TEXT,
+                                 friday TEXT, fri_stat TEXT,
+                                 saturday TEXT, sat_stat TEXT
+                                 );''')
+                
+                sql = f"""
+                INSERT INTO tbl_shop (shop_name,address,contact,fb_page,logistics,free_threshold,sunday,sun_stat,monday,mon_stat,tuesday,tue_stat,wednesday,wed_stat,thursday,thu_stat,friday,fri_stat,saturday,sat_stat) VALUES (
+                'Quinns Laundry House',
+                'Zone 6, Bagong Sirang San Felipe, Naga City / beside Blue Spring Water Refilling Station',
+                '+639761082555',
+                'https://www.facebook.com/quinns.laundryhouse',
+                35.0,
+                3,
+                '8:00 am-9:00 pm',
+                'open',
+                '8:00 am-9:00 pm',
+                'open',
+                '8:00 am-9:00 pm',
+                'open',
+                '8:00 am-9:00 pm',
+                'open',
+                '8:00 am-9:00 pm',
+                'open',
+                '8:00 am-9:00 pm',
+                'open',
+                '8:00 am-9:00 pm',
+                'open'
+                )
+                """
+                self.cur.execute(sql)
+                self.conn.commit()
+
+            except:
+                self.conn.rollback()
+
             # try:
             #     self.cur.execute('''ALTER TABLE tbl_book_tracking ADD COLUMN cancelled TEXT''')
-            #     self.conn.commit()
-            # except:
-            #     self.conn.rollback()
-
-            # try:
-            #     self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN gps_coordinate TEXT''')
-            #     self.conn.commit()
-            # except:
-            #     self.conn.rollback()
-
-            # try:
-            #     self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN logistics_fee NUMERIC''')
             #     self.conn.commit()
             # except:
             #     self.conn.rollback()
@@ -502,6 +531,44 @@ class db_strg:
     
     # Admin queries
 
+    def get_shop(self):
+        self.cur.execute(f"SELECT * FROM tbl_shop")
+        res = self.cur.fetchone()
+
+        return res
+    
+    def mod_tbl_shop(self, arr):
+        res = "valid"
+        try:    
+            self.cur.execute(f"""UPDATE tbl_shop SET 
+                            shop_name = '{arr['shop_name']}',
+                            address = '{arr['address']}',
+                            contact = '{arr['contact']}',
+                            fb_page = '{arr['fb_page']}',
+                            logistics = '{arr['logistics']}',
+                            free_threshold = '{arr['free_threshold']}',
+                            sunday = '{arr['sunday']}',
+                            sun_stat = '{arr['sun_stat']}',
+                            monday = '{arr['monday']}',
+                            mon_stat = '{arr['mon_stat']}',
+                            tuesday = '{arr['tuesday']}',
+                            tue_stat = '{arr['tue_stat']}',
+                            wednesday = '{arr['wednesday']}',
+                            wed_stat = '{arr['wed_stat']}',
+                            thursday = '{arr['thursday']}',
+                            thu_stat = '{arr['thu_stat']}',
+                            friday = '{arr['friday']}',
+                            fri_stat = '{arr['fri_stat']}',
+                            saturday = '{arr['saturday']}',
+                            sat_stat = '{arr['sat_stat']}'
+                            """)
+            self.conn.commit()
+        except:
+            res = "invalid"
+            self.conn.rollback()
+
+        return res
+
     def get_threads_admin(self):
         self.cur.execute(f"""
                          SELECT DISTINCT T.id, T.*, U.first_name, U.last_name FROM tbl_threads T 
@@ -674,7 +741,7 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"UPDATE tbl_payments SET mode='{arr['mode']}', ref_num='{arr['ref_num']}', amount='{arr['amount']}', status='{arr['status']}' WHERE id={arr['id']}")
-                if arr['status'] == "Paid":
+                if arr['status'] == "Paid" and arr['points'] != '' and arr['points'] != '0':
                     sql = f"INSERT INTO tbl_pts_earned (user_id,amount,source,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
                     #sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
                     self.cur.execute(sql)
