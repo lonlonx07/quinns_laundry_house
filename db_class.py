@@ -59,7 +59,6 @@ class db_strg:
         
         try:
             self.conn = psycopg2.connect(database=creden_arr['database'], user=creden_arr['user'], password=creden_arr['password'], host=creden_arr['host'], port=creden_arr['port'])
-            #self.conn = psycopg2.connect(database="quinns_laundry_db", user = "postgres", password = "XDm4y4143", host = "127.0.0.1", port = "5432")
             self.cur = self.conn.cursor(cursor_factory=RealDictCursor)
             #self.cur = self.conn.cursor()
             #conn.close()
@@ -629,10 +628,9 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"UPDATE tbl_booking SET quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
-                stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'ongoing','Completed':'completed','Cancelled':'cancelled'}
+                stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
-                
-                if arr['status'] == "Completed":
+                if arr['status'] == "Delivery":
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
                     res = self.cur.fetchone()
                     if res == None:
