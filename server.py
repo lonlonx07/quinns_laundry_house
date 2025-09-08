@@ -270,6 +270,16 @@ def set_thread_reply_admin():
     
     return jsonify(res) 
 
+@app.route('/mod_tbl_threads/', methods = ['POST']) 
+def mod_tbl_threads(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_threads(json_data['act'], json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
 @app.route('/get_billing_payments/<id>', methods = ['GET']) 
 def get_billing_payments(id): 
     res = db_con.get_billing_payments(id)

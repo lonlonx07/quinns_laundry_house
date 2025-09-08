@@ -616,7 +616,24 @@ class db_strg:
         #         pass
 
         return res
+    
+    def mod_tbl_threads(self, act, arr):
+        if act == "Delete":
+            res = "valid"
+            try:
+                if arr['timestamp'] == "": 
+                    self.cur.execute(f"DELETE FROM tbl_threads WHERE id = {arr['thread_id']}")
+                    self.cur.execute(f"DELETE FROM tbl_thread_messages TM USING tbl_threads T WHERE T.booking_id = {arr['thread_id']} AND TM.thread_id = T.id")
+                else:
+                    if arr['sender'] == '0':
+                        self.cur.execute(f"DELETE FROM tbl_thread_messages WHERE thread_id = {arr['thread_id']} AND timestamp = '{arr['timestamp']}'")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
 
+        return res
+    
     def get_booking_pack(self, id):
         self.cur.execute(f"SELECT * FROM tbl_booking_addon WHERE booking_id={id}")
         res = self.cur.fetchall()
@@ -624,7 +641,20 @@ class db_strg:
         return res
 
     def mod_tbl_bookings(self, act, arr):
-        if act == "Update":
+        if act == "Delete":
+            res = "valid"
+            try:
+                self.cur.execute(f"DELETE FROM tbl_booking WHERE id = '{arr['booking_id']}'")
+                self.cur.execute(f"DELETE FROM tbl_booking_addon WHERE booking_id = '{arr['booking_id']}'")
+                self.cur.execute(f"DELETE FROM tbl_book_tracking WHERE booking_id = '{arr['booking_id']}'")
+                self.cur.execute(f"DELETE FROM tbl_payments WHERE booking_id = '{arr['booking_id']}'")
+                self.cur.execute(f"DELETE FROM tbl_threads WHERE booking_id = '{arr['booking_id']}'")
+                self.cur.execute(f"DELETE FROM tbl_thread_messages TM USING tbl_threads T WHERE T.booking_id = '{arr['booking_id']}' AND TM.thread_id = T.id")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        elif act == "Update": 
             res = "valid"
             try:
                 self.cur.execute(f"UPDATE tbl_booking SET quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
