@@ -769,10 +769,14 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"UPDATE tbl_payments SET mode='{arr['mode']}', ref_num='{arr['ref_num']}', amount='{arr['amount']}', status='{arr['status']}' WHERE id={arr['id']}")
-                if arr['status'] == "Paid" and arr['points'] != '' and arr['points'] != '0':
-                    sql = f"INSERT INTO tbl_pts_earned (user_id,amount,source,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
-                    #sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
-                    self.cur.execute(sql)
+                if arr['payment_status'] == "Unpaid":
+                    if arr['mode'] == "Points":
+                        sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['amount']}\','Payment for service',\'{self.get_datetime()}\')"
+                        self.cur.execute(sql)
+                    if arr['status'] == "Paid" and arr['points'] != '' and arr['points'] != '0':
+                        sql = f"INSERT INTO tbl_pts_earned (user_id,amount,source,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
+                        #sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
+                        self.cur.execute(sql)
                 self.conn.commit()
             except:
                 res = "invalid"
