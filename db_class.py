@@ -729,7 +729,7 @@ class db_strg:
         if id == "all":
             self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
                             LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
-                            ORDER BY P.timestamp DESC""")
+                            ORDER BY P.id DESC""")
             res = self.cur.fetchall()
         else:
             self.cur.execute(f"""SELECT BA.*, B.quantity, B.unit FROM tbl_payments P 
@@ -771,7 +771,7 @@ class db_strg:
                 self.cur.execute(f"UPDATE tbl_payments SET mode='{arr['mode']}', ref_num='{arr['ref_num']}', amount='{arr['amount']}', status='{arr['status']}' WHERE id={arr['id']}")
                 if arr['payment_status'] == "Unpaid":
                     if arr['mode'] == "Points":
-                        sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['amount']}\','Payment for service',\'{self.get_datetime()}\')"
+                        sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['amount']}\','Payment for booking {self.format_std_code("QLH", str(arr['booking_id']), 6)}',\'{self.get_datetime()}\')"
                         self.cur.execute(sql)
                     if arr['status'] == "Paid" and arr['points'] != '' and arr['points'] != '0':
                         sql = f"INSERT INTO tbl_pts_earned (user_id,amount,source,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
