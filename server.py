@@ -8,6 +8,7 @@ from db_class import db_strg
 db_con = db_strg()
 app = Flask(__name__) 
 app.config['SECRET_KEY'] = "qlh-20080104"
+enable_app = True
 
 ONESIGNAL_APP_ID = "21c4382a-793b-49bd-a895-51f164ccd7ba"
 ONESIGNAL_REST_API_KEY = "os_v2_app_ehcdqktzhne33kevkhywjtgxxljyjzhzhijuynvo7pqk3xnvcjc5yvum6gp4en7aoyymhg4alurmytzmh7itfjhwf2o73kq3bmrm4lq"
@@ -86,10 +87,26 @@ def users(id):
    
     return jsonify(rows)
 
+@app.route('/suspend_api/<authkey>', methods = ['GET']) 
+def suspend_api(authkey): 
+    if authkey != "":
+        global enable_app
+
+    if authkey == "m4y4lonx_off":
+        enable_app = False
+    elif authkey == "m4y4lonx_on":
+        enable_app = True
+    
+    return jsonify(enable_app)
+
 @app.route('/services/<id>', methods = ['GET']) 
 def services(id): 
     rows = db_con.get_services(id)
-    return jsonify(rows)
+    if enable_app:
+        return jsonify(rows)
+    else:
+        rows = ""
+        return rows
 
 @app.route('/addons/<id>', methods = ['GET']) 
 def addons(id): 
