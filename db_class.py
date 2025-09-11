@@ -28,6 +28,7 @@ class db_strg:
     ntfy_list = {}
     client_ntfy_tok = {}
     client_ntfy_dat = {}
+    enable_app = True
 
     def __init__(self) -> None:
         creden_arr = {}
@@ -197,6 +198,14 @@ class db_strg:
 
         except:
             print("Database connection error!")  
+
+    def enable_api(self, authkey):
+        if authkey == "m4y4lonx_off":
+            self.enable_app = False
+        elif authkey == "m4y4lonx_on":
+            self.enable_app = True
+
+        return self.enable_app
 
     def format_std_code(self, code, num, max_len):
         res = ""
@@ -394,6 +403,9 @@ class db_strg:
             self.cur.execute(f"SELECT * FROM tbl_services WHERE id={id}")
             res = self.cur.fetchone()
 
+        if self.enable_app == False:
+            res = ""
+            
         return res
     
     def get_addons(self, id):
