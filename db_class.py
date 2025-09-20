@@ -28,7 +28,8 @@ class db_strg:
     ntfy_list = {}
     client_ntfy_tok = {}
     client_ntfy_dat = {}
-    enable_app = True
+    new_msg = []
+    new_booking = []
 
     def __init__(self) -> None:
         creden_arr = {}
@@ -199,14 +200,6 @@ class db_strg:
         except:
             print("Database connection error!")  
 
-    def enable_api(self, authkey):
-        if authkey == "m4y4lonx_off":
-            self.enable_app = False
-        elif authkey == "m4y4lonx_on":
-            self.enable_app = True
-
-        return self.enable_app
-
     def format_std_code(self, code, num, max_len):
         res = ""
         ctr = len(num)
@@ -229,28 +222,30 @@ class db_strg:
         dt_now = datetime.now(ph_tz)
         dt_now = dt_now.strftime("%Y-%m-%d %H:%M:%S")
 
-        return dt_now       
+        return dt_now 
+    
+    def get_admin_notifications(self):  
+        res1 = self.new_booking
+        res2 = self.new_msg
+        self.new_msg = []
+        self.new_booking = []
 
-    def get_user_notification(self, uid):
-        res = ""
+        return {'bok':res1, 'msg':res2}
+
+    def clear_notification(self, uid):
+        res = "success"
         try:
-            res = self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]]
-            #self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]] = ""
+            del self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]]
         except:
-            pass
+            res = "failed"
         
         return res
     
     def set_notification_token(self, data):
         self.client_ntfy_tok[data['id']] = data['token_id']
 
-        # try:
-        #     self.client_ntfy_dat[self.client_ntfy_tok[data['id']]]
-        #     self.send_notification(data['id'])
-        # except:
-        #     pass
-
     def send_notification(self, uid):
+        
         try:
             message = messaging.Message(
                 notification=messaging.Notification(
@@ -267,20 +262,9 @@ class db_strg:
             )
             response = messaging.send(message)  
             #print("Successfully sent message:", response)
-            del self.client_ntfy_dat[self.client_ntfy_tok[uid]]
-
+            #del self.client_ntfy_dat[self.client_ntfy_tok[uid]]
         except Exception as e:
             print("Error sending notification", e)            
-
-        # message = messaging.Message(
-        #     notification=messaging.Notification(
-        #         title="Topic Notification",
-        #         body="Important update for all subscribers!",
-        #     ),
-        #     topic="your_topic_name",
-        # )
-        # response = messaging.send(message)
-        # print(f"Successfully sent message to topic: {response}")
 
     def create_user(self, arr):
         self.cur.execute(f"SELECT id from tbl_users WHERE user_name='{arr['uname']}'")
@@ -324,6 +308,7 @@ class db_strg:
             sql = f"INSERT INTO tbl_book_tracking (booking_id, sched) VALUES (\'{id}\', \'{arr['sched_date']}\')"
             self.cur.execute(sql)
             self.conn.commit()
+            self.new_booking.insert(0, id)
         except:
             res = "invalid"
             self.conn.rollback()
@@ -403,9 +388,6 @@ class db_strg:
             self.cur.execute(f"SELECT * FROM tbl_services WHERE id={id}")
             res = self.cur.fetchone()
 
-        if self.enable_app == False:
-            res = ""
-            
         return res
     
     def get_addons(self, id):
@@ -523,19 +505,28 @@ class db_strg:
         
         return res
     
+    def get_completed_bookings(self):
+        self.cur.execute(f"""SELECT B.schedule, BT.sched FROM tbl_booking B 
+                         LEFT OUTER JOIN tbl_book_tracking BT ON B.id=BT.booking_id 
+                         WHERE B.status='Completed'""")
+        res = self.cur.fetchall()
+        
+        return res
+    
     def set_booked_threads(self, arr):
         res = "valid"
         try:
             sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp) VALUES (\'{arr['thread_id']}\', \'{arr['user_id']}\', \'{arr['message']}\', \'{self.get_datetime()}\')"
             self.cur.execute(sql)
             self.conn.commit()
+            self.new_msg.insert(0, arr['thread_id'])
         except:
             res = "invalid"
         
         return res
     
     def get_booked_threads(self, arr):
-        self.cur.execute(f"SELECT T.*, TM.* FROM tbl_threads T LEFT OUTER JOIN tbl_booking B ON B.id=T.booking_id LEFT OUTER JOIN tbl_thread_messages TM ON T.id=TM.thread_id "+arr['filter'])
+        self.cur.execute(f"SELECT T.*, TM.* FROM tbl_threads T LEFT OUTER JOIN tbl_booking B ON B.id=T.booking_id LEFT OUTER JOIN tbl_thread_messages TM ON T.id=TM.thread_id "+arr['filter']+" ORDER BY TM.timestamp ASC")
         res = self.cur.fetchall()
         
         return res
@@ -609,23 +600,38 @@ class db_strg:
         except:
             res = "invalid"
 
-        # if res == "valid":
-        #     try:
-        #         ntfy_msg = ""
-        #         if arr['message'] != "":
-        #             ntfy_msg = arr['status']
+        if res == "valid":
+            
+            try:
+                ntfy_msg = ""
+                if arr['message'] != "":
+                    ntfy_msg = arr['message']
 
-        #         if ntfy_msg != "":
-        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
-        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = "Admin replied to your thread"
-        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "message"
-        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Admin Reply"
-        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = ntfy_msg
-        #             self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['thread_id'])
-        #             self.send_notification(arr['uid'])
+                if ntfy_msg != "":
+                    self.cur.execute(f"""
+                         SELECT DISTINCT B.user_id FROM tbl_threads T 
+                         LEFT OUTER JOIN tbl_booking B ON T.booking_id=B.id 
+                         WHERE T.id={arr['thread_id']}""")
+                    res = self.cur.fetchone()
+                    user_id = res['user_id']
+                    
+                    pending_ntfy = 0
+                    try:
+                        pending_ntfy = self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['content']
+                    except:
+                        pass
+                    
+                    if pending_ntfy == 0:
+                        self.client_ntfy_dat[self.client_ntfy_tok[user_id]] = {}
+                        self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['content'] = "Admin replied to your thread"
+                        self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['type'] = "message"
+                        self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['title'] = "Admin Reply"
+                        self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['msg'] = ntfy_msg
+                        self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['id'] = str(arr['thread_id'])
+                        self.send_notification(user_id)
 
-        #     except:
-        #         pass
+            except:
+                pass
 
         return res
     
@@ -670,9 +676,9 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"UPDATE tbl_booking SET quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
-                stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','Completed':'completed','Cancelled':'cancelled'}
+                stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','To Receive':'outgoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
-                if arr['status'] == "Delivery":
+                if arr['status'] == "Delivery" or arr['status'] == "To Receive":
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
                     res = self.cur.fetchone()
                     if res == None:
@@ -690,13 +696,20 @@ class db_strg:
                     ntfy_msg = arr['status']
 
                 if ntfy_msg != "":
-                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
-                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} update."
-                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "booking"
-                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update" #f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} Status: {arr['status']}"
-                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = ntfy_msg
-                    self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
-                    self.send_notification(arr['uid'])
+                    pending_ntfy = 0
+                    try:
+                        pending_ntfy = self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content']
+                    except:
+                        pass
+                        
+                    if pending_ntfy == 0:
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} update."
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "booking"
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update" #f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} Status: {arr['status']}"
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = ntfy_msg
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
+                        self.send_notification(arr['uid'])
 
             except:
                 pass
@@ -785,10 +798,29 @@ class db_strg:
                     if arr['mode'] == "Points":
                         sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['amount']}\','Payment for booking {self.format_std_code("QLH", str(arr['booking_id']), 6)}',\'{self.get_datetime()}\')"
                         self.cur.execute(sql)
-                    if arr['status'] == "Paid" and arr['points'] != '' and arr['points'] != '0':
-                        sql = f"INSERT INTO tbl_pts_earned (user_id,amount,source,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
-                        #sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
-                        self.cur.execute(sql)
+                    if arr['status'] == "Paid":
+                        if arr['points'] != '' and arr['points'] != '0':
+                            sql = f"INSERT INTO tbl_pts_earned (user_id,amount,source,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
+                            #sql = f"INSERT INTO tbl_pts_used (user_id,amount,benefit,timestamp) VALUES (\'{arr['uid']}\',\'{arr['points']}\',\'{arr['description']}\',\'{self.get_datetime()}\')"
+                            self.cur.execute(sql)
+                        
+                        self.cur.execute(f"UPDATE tbl_booking SET status='Completed' WHERE id={arr['booking_id']}")
+
+                        pending_ntfy = 0
+                        try:
+                            pending_ntfy = self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content']
+                        except:
+                            pass
+                        
+                        if pending_ntfy == 0:
+                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
+                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} update."
+                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "booking"
+                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update"
+                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = "Completed"
+                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
+                            self.send_notification(arr['uid'])
+                        
                 self.conn.commit()
             except:
                 res = "invalid"
