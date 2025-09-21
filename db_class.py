@@ -792,6 +792,7 @@ class db_strg:
     def mod_tbl_billings(self, act, arr):
         if act == "Update":
             res = "valid"
+            send_ntfy = 0
             try:
                 self.cur.execute(f"UPDATE tbl_payments SET mode='{arr['mode']}', ref_num='{arr['ref_num']}', amount='{arr['amount']}', status='{arr['status']}' WHERE id={arr['id']}")
                 if arr['payment_status'] == "Unpaid":
@@ -805,22 +806,41 @@ class db_strg:
                             self.cur.execute(sql)
                         
                         self.cur.execute(f"UPDATE tbl_booking SET status='Completed' WHERE id={arr['booking_id']}")
+                        self.cur.execute(f"UPDATE tbl_book_tracking SET completed=\'{self.get_datetime()}\' WHERE booking_id={arr['booking_id']}")
+                        send_ntfy = 1
 
-                        pending_ntfy = 0
-                        try:
-                            pending_ntfy = self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content']
-                        except:
-                            pass
-                        
-                        if pending_ntfy == 0:
-                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
-                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} update."
-                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "booking"
-                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update"
-                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = "Completed"
-                            self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
-                            self.send_notification(arr['uid'])
-                        
+                self.conn.commit()
+            except:
+                print("Billing error")
+                res = "invalid"
+                self.conn.rollback()
+
+            if send_ntfy == 1:
+                pending_ntfy = 0
+                try:
+                    pending_ntfy = self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content']
+                except:
+                    pass
+                
+                try:
+                    if pending_ntfy == 0:
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]] = {}
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['content'] = f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} update."
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['type'] = "booking"
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update"
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = "Completed"
+                        self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
+                        self.send_notification(arr['uid'])
+                except:
+                    pass
+
+        return res
+    
+    def mod_tbl_users(self, act, arr):
+        if act == "Update":
+            res = "valid"
+            try:
+                self.cur.execute(f"UPDATE tbl_users SET status='{arr['status']}' WHERE id={arr['id']}")
                 self.conn.commit()
             except:
                 res = "invalid"

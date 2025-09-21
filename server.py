@@ -326,6 +326,16 @@ def mod_tbl_billings():
     
     return jsonify(res) 
 
+@app.route('/mod_tbl_users/', methods = ['POST']) 
+def mod_tbl_users(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_users(json_data['act'], json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
 # Admin route
   
 if __name__ == '__main__': 
