@@ -1,10 +1,8 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import requests
 import os
 import json
 import socket
-from global_variable import g_var
 from db_class import db_strg
 db_con = db_strg()
 app = Flask(__name__) 
@@ -19,14 +17,10 @@ def ntfy_reg_device(data):
 
 @app.route('/') 
 def home(): 
-    #res = db_con.get_booked_services({'filter':'ORDER BY timestamp'})
-    #return render_template("system.html", data=res)
     return "API access only"
 
 @app.route('/<filter>') 
 def filtered_booking(filter): 
-    #res = db_con.get_booked_services({'filter':f'WHERE status=\'{filter}\''})
-    #return render_template("system.html", data=res)
     return "API access only"
 
 @app.route('/clear_notification/<id>', methods = ['GET']) 

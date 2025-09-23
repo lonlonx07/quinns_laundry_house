@@ -191,12 +191,6 @@ class db_strg:
             except:
                 self.conn.rollback()
 
-            # try:
-            #     self.cur.execute('''ALTER TABLE tbl_book_tracking ADD COLUMN cancelled TEXT''')
-            #     self.conn.commit()
-            # except:
-            #     self.conn.rollback()
-
         except:
             print("Database connection error!")  
 
