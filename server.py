@@ -19,6 +19,11 @@ def ntfy_reg_device(data):
 def home(): 
     return "API access only"
 
+@app.route('/send_mail') 
+def send_mail(): 
+    res = db_con.send_otp_email('Test', 'lonlonx07@gmail.com')
+    return res
+
 @app.route('/<filter>') 
 def filtered_booking(filter): 
     return "API access only"

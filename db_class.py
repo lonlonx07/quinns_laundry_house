@@ -9,6 +9,7 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 #cred = credentials.Certificate("quinns-laundry-house-5d121-cad4a86b8589.json")
 #firebase_admin.initialize_app(cred)
+from smtplib import SMTP
 
 os.environ['SERVICE_ACCOUNT_JSON'] = 'eyJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsICJwcm9qZWN0X2lkIjogInF1aW5ucy1sYXVuZHJ5LWhvdXNlLTVkMTIxIiwgInByaXZhdGVfa2V5X2lkIjogImNhZDRhODZiODU4OWI3MDc2ZTA0ZmE4N2EzOTllOWU5OGEwYjc5YzYiLCAicHJpdmF0ZV9rZXkiOiAiLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tXG5NSUlFdmdJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLZ3dnZ1NrQWdFQUFvSUJBUUM3aVNIK3haemZpRGY0XG51bkMrRytBRVUzcENMSjMvSjVYZ0NTcm1xeDBDTUZsMUdJQXpuUTdTd3pUc3RRZ3pHbkMwZFVqSFRuZmZtWDJXXG5iZzNYNXBEVXVmRTdmM2JZRzhWNzdBV09ZTFVUYmNGczBxM2cydXhFbklSRVljb2NQSGlIclhsSzhuT05OODgzXG5Sa1N5UG1NWVBIdmdhcjk3eFFXMWVVcXFKOEdUTXMyZzZ5RExkYys0dlVmaWtxRndBcFFaOFNYVkd0MHM0eVNDXG5lUWF6dmorSXh4YjlTNnQ5S0hXMG51YzNYTVg4c3BrVTYvdUttRHFKdk5SZHU3SlpwNTNMN0hFSmp1elBwYjhtXG4zUi9hM25Kbi82dzJ2MW8vbGp2ZG9rRTQ0ZVc5ZXgyYUl5amhPWjVrRGNrWWNQWlRSTHUwWXlSdWxKWFRXejZXXG5VNjJsNWxGakFnTUJBQUVDZ2dFQUNLdWdiTDBLTWJPRWt2VmJ2UTVnM3hKVTlyWkZYOFNldzBycE50ejJiR0Y3XG40VlFPcVZRN21UYjVQWEJwUHFPY1RsdVZ6OUVxN2FXVkR0MXJ1bTJvaUkxSVArMzJ1cXNlQ0VxelB3L3RqMFpsXG55UGc4bmNiQlliS3kwczZLbjUrVUd3SEVOOWpaeXMrbnZ2QjZ3SnJ0emZNTjd5UkFVaUtienZZYW81OU83ZFU1XG5JdkQrRlFMWkNQUllUVHBCZVpYbG02OE9SbThUdTRrNTdWNGROSkh4bVJIUkc1Snh4ZFN4elNIV3hzNDVDVHBuXG55Wnk1SVMrT2xsZzNNZTNrZDg0V2UvNkZBTWZTRXlWeEFaSGZXU0VTTVJZSlgvbmNMWUZXWVg4MVltS1c3NmFtXG5YU2R3V3RWa1p2NUpKd1p4N0w4RWRjbUo5SXZ2bUFlWUZsbmdJb3EzY1FLQmdRRHVvWThvRWNhQ0pGbTcrVHRSXG5TelFqdFBYSXpYU2pwL1NPSVd4Z1VNalVxT2wrTkVpT2l2MTg5bHM2eG04Y2JleWZVbGNZT1k2UWtUUUFZSmJzXG43bVJhMjVRY3Fad3dNZ2NpaGRWYzFHNi90TTYzbXpUY3ZMTFp5aEMvZ0VEOFFBT3RrYlNYcEFVVi90UjdEYkFlXG43TU9RUkUvTHlwV3pqQWJSNkx2OTBnc09yd0tCZ1FESkw0RzhabmcyY2s3VFFYLzZKZCtTNXJNMnR4b2c5eitTXG5uSWFhVk5Za2ZwV1pBWDBBTWxidnpWVnNnMjV2cFNBZm5BTC9peHVZUEpCNGoyTEFpMUpHcGorVEg5WWJmOEJrXG44ejl5VnFvNHIzUlduUFVhQ1pxUVRqenhua1UzQjdtQm40T1AzVDlwY0tmNDc1VC9BbVFBOU9RNU5DUmlpUFlnXG5JdDJhS2NzMWpRS0JnUURhbktsd2RQQmRzMzE5cG5NQUk1d3RoZytSR1IvYytmWWg2MTdFMGQxYWJUQVRUVVNYXG5TWisyUmw4SGRsaStPN29GcjBKWTBBbmFTUnZScUtzN2ZaMzBXcXJTbzFPU0Y1TFB2cm5icEVXZFhML3dGc0VUXG40ODhabEhOSmJPNmI2TzAxcW9FK1ZxWE9JN2wyemZCbU5GTm9yQnhLUDFwcnRVRmVOZzliRlh6Snd3S0JnQXUyXG5GMEJIV3NJWW4xd08yUXRQdnhjSEZQR2ZjUWJ3UGFRa05uV3ZjSlBKUnA0VWh4bEcxT2E2dGpsTjRWVGdjT0ZHXG5MS3FCaDRheUo5ck14ZnZkWUZtNmZjTHJ2SVAzU05UWGtCN3d5cEhvTE1hSjluNmdobjNXQUJnMGxXVGhyenZMXG5kRllnay90b1VtN2NTM2tZdzRlR3VlNVdpYk91czEwbGltN1o5ZmxWQW9HQkFKS0E2bnptQlREQW5pZGZveWZBXG4vT05UWHUweDdFU3paS0N0aUJIV25LMElSdGRBUDZ0Nm40R2tpWTRQcDl1RkprdSt2NmVFbk1Mc3dwN21mVDZpXG42T3UxbXpNR3YwNGNNQlZGdHhyMkN6aVVZZVMvS1NnWE94WTMwc0ZYT0lDRURtS1d1enJha0hLYzg1UytmejJTXG5Sc3g4WTFEUWxoR1oxZkJZQ2VLMjFYVENcbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsICJjbGllbnRfZW1haWwiOiAiZmlyZWJhc2UtYWRtaW5zZGstZmJzdmNAcXVpbm5zLWxhdW5kcnktaG91c2UtNWQxMjEuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCAiY2xpZW50X2lkIjogIjExNzM3MDQ0MjkwMDM1NjIxODA1NCIsICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLCAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92MS9jZXJ0cyIsICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2ZpcmViYXNlLWFkbWluc2RrLWZic3ZjJTQwcXVpbm5zLWxhdW5kcnktaG91c2UtNWQxMjEuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCAidW5pdmVyc2VfZG9tYWluIjogImdvb2dsZWFwaXMuY29tIn0='
 encoded_key = os.getenv("SERVICE_ACCOUNT_JSON")
@@ -71,7 +72,7 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC);''')
+                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -191,8 +192,54 @@ class db_strg:
             except:
                 self.conn.rollback()
 
+            try:
+                self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN notes TEXT''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
         except:
             print("Database connection error!")  
+
+    def send_otp_email(self, otp_code, recipient):
+        user = "nariyukisama@gmail.com"
+        pwd = "FuminoRizu"
+        subject = "OTP verification code"
+       
+        message = f"""
+        Hi!
+        <br/><br/>
+        Your OTP verification code is <b>{otp_code}</b>. Do not share you code to anyone.
+        <br/>
+        Ignore this message if you don't recognized this request.
+        <br/><br/>
+        Thanks
+        """
+        
+        try:
+            server = SMTP('smtp.gmail.com', 587)
+            server.ehlo()
+            server.starttls()
+            server.login(user, pwd)
+            server.sendmail(user, recipient, message)
+            server.quit()
+
+            mail_res = "mail sent"
+        except Exception as e:
+            mail_res = "mail failed"
+        
+        # with SMTP(host='smtp.gmail.com', port=465) as smtp:
+        #     try:
+        #         smtp.sendmail(from_addr=user, to_addrs=recipient, msg=message)
+        #         smtp.quit()
+        #         mail_res = "mail sent"
+        #     except:
+        #         mail_res = "mail failed"
+
+        if otp_code == "Test":
+            return mail_res
+        else:
+            print(mail_res)
 
     def format_std_code(self, code, num, max_len):
         res = ""
@@ -269,8 +316,7 @@ class db_strg:
                 self.cur.execute(sql)
                 id = (self.cur.fetchone())['id']
                 self.conn.commit()
-                self.otp_list[id] = self.gen_rand_num_codes(4)
-                res = id
+                res = {'id': id}
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -280,14 +326,19 @@ class db_strg:
         return res 
     
     def create_booking(self, arr):
-        sql = f"INSERT INTO tbl_booking (user_id, schedule, mode, client, contact, pickup_loc, quantity, unit, timestamp, status) VALUES (\'{arr['uid']}\', \'{arr['sched']}\', \'{arr['mode']}\', \'{arr['client']}\', \'{arr['contact']}\', \'{arr['ploc']}\', '', '', \'{self.get_datetime()}\', 'Pending') RETURNING id"
+        sql = f"INSERT INTO tbl_booking (user_id, schedule, mode, client, contact, pickup_loc, quantity, unit, timestamp, status, notes) VALUES (\'{arr['uid']}\', \'{arr['sched']}\', \'{arr['mode']}\', \'{arr['client']}\', \'{arr['contact']}\', \'{arr['ploc']}\', '', '', \'{self.get_datetime()}\', 'Pending', \'{arr['notes']}\') RETURNING id"
         
         try:
             self.cur.execute(sql)
             id = (self.cur.fetchone())['id']
-            sql = f"INSERT INTO tbl_threads (booking_id, timestamp, status) VALUES (\'{id}\', \'{self.get_datetime()}\', 'Open')"
+            sql = f"INSERT INTO tbl_threads (booking_id, timestamp, status) VALUES (\'{id}\', \'{self.get_datetime()}\', 'Open') RETURNING id"
             self.cur.execute(sql)
-            i=1
+
+            # t_id = (self.cur.fetchone())['id']
+            # if arr['notes'] != "":
+            #     sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp) VALUES (\'{t_id}\', \'{arr['uid']}\', \'{arr['notes']}\', \'{self.get_datetime()}\')"
+            #     self.cur.execute(sql)
+            
             for key in arr:
                 try:
                     if key != "sched_date":
@@ -297,7 +348,6 @@ class db_strg:
                 except:
                     pass
 
-            self.otp_list[id] = self.gen_rand_num_codes(4)
             res = id
             sql = f"INSERT INTO tbl_book_tracking (booking_id, sched) VALUES (\'{id}\', \'{arr['sched_date']}\')"
             self.cur.execute(sql)
@@ -314,10 +364,7 @@ class db_strg:
         res = self.cur.fetchone()
         if res == None:
             res = "invalid"
-        else:
-            if res['status'] == "Pending":
-                self.otp_list[res[id]] = self.gen_rand_num_codes(4)
-            
+        
         return res
     
     def request_reset_password(self, user_name):
@@ -361,6 +408,10 @@ class db_strg:
     def retrieve_otp(self, arr):
         self.otp_list[arr['user_id']] = self.gen_rand_num_codes(4)
         res = self.otp_list[arr['user_id']]
+
+        self.cur.execute(f"SELECT email from tbl_users WHERE id={arr['user_id']}")
+        otp_recv = self.cur.fetchone()
+        self.send_otp_email(res, otp_recv['email'])
 
         return res
     
