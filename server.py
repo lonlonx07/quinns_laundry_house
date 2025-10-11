@@ -334,6 +334,6 @@ def mod_tbl_users():
   
 if __name__ == '__main__': 
     host = socket.gethostbyname(socket.gethostname())
-    port = os.environ.get('PORT', 5000)
+    port = os.environ.get('PORT', 10002)
     app.run(host=host, port=port, debug = True)
     
