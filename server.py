@@ -31,7 +31,7 @@ def clear_notification(id):
 
 @app.route('/active_bookings') 
 def active_bookings(): 
-    res = db_con.get_booked_services({'filter':'ORDER BY timestamp DESC'})
+    res = db_con.get_booked_services()
     return jsonify(res)
 
 @app.route('/completed_bookings') 
@@ -53,13 +53,49 @@ def users(id):
    
     return jsonify(rows)
 
-@app.route('/services/<id>', methods = ['GET']) 
-def services(id): 
-    rows = db_con.get_services(id)
-    if rows != "":
-        return jsonify(rows)
+@app.route('/services/<data>', methods = ['GET']) 
+def services(data): 
+    res = "invalid"
+    arr = json.loads(data)
+
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.get_services(arr['id'])
+    
+    if res != "invalid":
+        return jsonify(res)
     else:
-        return rows
+        return res
+    
+@app.route('/get_user_booking/<cnd>', methods = ['GET']) 
+def get_user_booking(cnd): 
+    res = "invalid"
+    arr = json.loads(cnd)
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.get_booking(arr['id'])
+
+    if res != "invalid":
+        return jsonify(res)
+    else:
+        return res
+    
+@app.route('/get_booking_details/<cnd>', methods = ['GET']) 
+def get_booking_details(cnd): 
+    res = "invalid"
+    arr = json.loads(cnd)
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.get_booking_details(arr['id'])
+
+    # if res != "invalid":
+    #     return res
+    # else:
+    return res
+    
+@app.route('/set_booking/<booking_data>', methods = ['POST']) 
+def set_booking(booking_data): 
+    arr = json.loads(booking_data)
+    
+    res = db_con.create_booking(arr)
+    return jsonify(res) 
 
 @app.route('/addons/<id>', methods = ['GET']) 
 def addons(id): 
@@ -111,7 +147,7 @@ def signin(creden):
 def signup(creden): 
     arr = json.loads(creden)
     res = db_con.create_user(arr)
-    if res != "exist" and res != "invalid":
+    if res != "user_name" and res != "email" and res != "invalid":
         return jsonify(res)
     else:
         return res
@@ -141,13 +177,6 @@ def get_otp(creden):
     arr = json.loads(creden)
     res = db_con.retrieve_otp(arr)
     return res
-    
-@app.route('/set_booking/<booking_data>', methods = ['POST']) 
-def set_booking(booking_data): 
-    arr = json.loads(booking_data)
-    
-    res = db_con.create_booking(arr)
-    return jsonify(res) 
 
 # @app.route('/get_booking/<booking_data>', methods = ['GET']) 
 # def get_booking(booking_data): 
@@ -157,13 +186,6 @@ def set_booking(booking_data):
 #     return jsonify(res) 
 
 # new mod
-
-@app.route('/get_user_booking/<cnd>', methods = ['GET']) 
-def get_user_booking(cnd): 
-    arr = json.loads(cnd)
-    
-    res = db_con.get_booking(arr)
-    return jsonify(res)
 
 @app.route('/get_booking_services/<cnd>', methods = ['GET']) 
 def get_booking_services(cnd): 
@@ -204,6 +226,11 @@ def set_threads(threads_data):
 
 
 # Admin route
+
+@app.route('/get_products/<id>', methods = ['GET']) 
+def get_products(id): 
+    rows = db_con.get_admin_products(id)
+    return jsonify(rows)
 
 @app.route('/get_admin_notifications', methods = ['GET']) 
 def get_admin_notifications(): 
@@ -274,7 +301,7 @@ def get_booking_pack(id):
 def mod_tbl_bookings(): 
     json_data = request.get_json()
     if json_data['tok'] == app.config['SECRET_KEY']:
-        res = db_con.mod_tbl_bookings(json_data['act'], json_data['data'])
+        res = db_con.mod_tbl_bookings(json_data['act'], json_data['data'], json_data['items'])
     else:
         res = {"res":"invalid"}
     

@@ -45,16 +45,8 @@ class db_strg:
 
         services_data = {}
         try:
-            with open("services.txt", "r") as f:
+            with open("products.txt", "r") as f:
                 services_data = f.readlines()
-            f.close()
-        except:
-            pass
-        
-        addons_data = {}
-        try:
-            with open("addons.txt", "r") as f:
-                addons_data = f.readlines()
             f.close()
         except:
             pass
@@ -71,39 +63,41 @@ class db_strg:
                 self.conn.rollback()
 
             try:
+                self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amount INT, source TEXT, timestamp TEXT);''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''CREATE TABLE tbl_pts_used (user_id INT, amount INT, benefit TEXT, timestamp TEXT);''')
+                self.conn.commit()
+            except:
+                self.conn.rollback() 
+
+            try:
                 self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_booking_addon (booking_id INT, service_id INT, prod_type TEXT);''')
-                self.conn.commit()
-            except:
-                self.conn.rollback()
-
-            try:
-                self.cur.execute('''CREATE TABLE tbl_services (id SERIAL PRIMARY KEY, category TEXT, title TEXT, sub_title TEXT, description TEXT, price numeric, quantity numeric, unit TEXT, status TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_products (id SERIAL PRIMARY KEY, title TEXT, description TEXT, price numeric, quantity numeric, unit TEXT, prod_type TEXT, status TEXT);''')
                 for item in services_data:
                     arr = item.split("::")
-                    sql = f"INSERT INTO tbl_services (category,title,sub_title,description,price,quantity,unit,status) VALUES (\'{arr[1]}\', \'{arr[2]}\', \'{arr[3]}\', \'{arr[4]}\', \'{arr[5]}\', \'{arr[6]}\', \'{arr[7]}\', \'{arr[8]}\')"
+                    sql = f"INSERT INTO tbl_products (title,description,price,quantity,unit,prod_type,status) VALUES (\'{arr[1]}\', \'{arr[2]}\', \'{arr[3]}\', \'{arr[4]}\', \'{arr[5]}\', \'{arr[0]}\', \'{(arr[6]).strip()}\')"
                     self.cur.execute(sql)
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_addons (id SERIAL PRIMARY KEY, category TEXT, title TEXT, description TEXT, price numeric, status TEXT);''')
-                for item in addons_data:
-                    arr = item.split("::")
-                    sql = f"INSERT INTO tbl_addons (category,title,description,price,status) VALUES (\'{arr[1]}\', \'{arr[2]}\', \'{arr[3]}\', \'{arr[4]}\', \'{arr[5]}\')"
-                    self.cur.execute(sql)
+                self.cur.execute('''CREATE TABLE tbl_booking_items (booking_id INT, service_id INT, quantity numeric);''')
                 self.conn.commit()
             except:
-                self.conn.rollback() 
+                self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_threads (id SERIAL PRIMARY KEY, booking_id INT, timestamp TEXT, status TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_threads (id SERIAL PRIMARY KEY, booking_id INT, timestamp TEXT, status TEXT, viewed TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -115,7 +109,7 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_payments (id SERIAL PRIMARY KEY, booking_id INT, mode TEXT, ref_num TEXT, amount NUMERIC, status TEXT, timestamp TEXT, add_charges NUMERIC, description TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_payments (id SERIAL PRIMARY KEY, booking_id INT, mode TEXT, ref_num TEXT, amount NUMERIC, timestamp TEXT, status TEXT, add_charges NUMERIC, description TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -131,18 +125,6 @@ class db_strg:
                 self.conn.commit()
             except:
                 self.conn.rollback()
-
-            try:
-                self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amount INT, source TEXT, timestamp TEXT);''')
-                self.conn.commit()
-            except:
-                self.conn.rollback()
-
-            try:
-                self.cur.execute('''CREATE TABLE tbl_pts_used (user_id INT, amount INT, benefit TEXT, timestamp TEXT);''')
-                self.conn.commit()
-            except:
-                self.conn.rollback() 
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_book_tracking (booking_id INT, sched TEXT, accepted TEXT, pickup TEXT, drop_off TEXT, arrived TEXT, processing TEXT, outgoing TEXT, completed TEXT, cancelled TEXT);''')
@@ -188,12 +170,6 @@ class db_strg:
                 self.cur.execute(sql)
                 self.conn.commit()
 
-            except:
-                self.conn.rollback()
-
-            try:
-                self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN notes TEXT''')
-                self.conn.commit()
             except:
                 self.conn.rollback()
 
@@ -280,7 +256,7 @@ class db_strg:
             print("Error sending notification", e)            
 
     def create_user(self, arr):
-        self.cur.execute(f"SELECT id from tbl_users WHERE user_name='{arr['uname']}'")
+        self.cur.execute(f"SELECT id, user_name, email from tbl_users WHERE user_name='{arr['uname']}' OR email='{arr['email']}'")
         res = self.cur.fetchone()
         if res == None:
             sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
@@ -293,7 +269,10 @@ class db_strg:
                 res = "invalid"
                 self.conn.rollback()
         else:
-            res = "exist"
+            if res['user_name'] == arr['uname']:
+                res = "user_name"
+            elif res['email'] == arr['email']:
+                res = "email"
 
         return res 
     
@@ -303,28 +282,15 @@ class db_strg:
         try:
             self.cur.execute(sql)
             id = (self.cur.fetchone())['id']
-            sql = f"INSERT INTO tbl_threads (booking_id, timestamp, status) VALUES (\'{id}\', \'{self.get_datetime()}\', 'Open') RETURNING id"
+            sql = f"INSERT INTO tbl_threads (booking_id, timestamp, status, viewed) VALUES (\'{id}\', \'{self.get_datetime()}\', 'Open', '') RETURNING id"
             self.cur.execute(sql)
 
-            # t_id = (self.cur.fetchone())['id']
-            # if arr['notes'] != "":
-            #     sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp) VALUES (\'{t_id}\', \'{arr['uid']}\', \'{arr['notes']}\', \'{self.get_datetime()}\')"
-            #     self.cur.execute(sql)
-            
-            for key in arr:
-                try:
-                    if key != "sched_date":
-                        tmp_arr = arr[key].split("-")
-                        sql = f"INSERT INTO tbl_booking_addon (booking_id, service_id, prod_type) VALUES (\'{id}\', \'{tmp_arr[1]}\', \'{tmp_arr[0]}\')"
-                        self.cur.execute(sql)
-                except:
-                    pass
-
-            res = id
             sql = f"INSERT INTO tbl_book_tracking (booking_id, sched) VALUES (\'{id}\', \'{arr['sched_date']}\')"
             self.cur.execute(sql)
             self.conn.commit()
             self.new_booking.insert(0, id)
+
+            res = id
         except:
             res = "invalid"
             self.conn.rollback()
@@ -389,7 +355,7 @@ class db_strg:
     
     def get_user(self, id):
         if id == "all":
-            self.cur.execute(f"SELECT * FROM tbl_users")
+            self.cur.execute(f"SELECT * FROM tbl_users ORDER BY timestamp DESC")
             res = self.cur.fetchall()
         else:
             self.cur.execute(f"SELECT * FROM tbl_users WHERE id={id}")
@@ -397,15 +363,48 @@ class db_strg:
 
         return res
     
-    def get_services(self, id):
+    def get_admin_products(self, id):
         if id == "all":
-            self.cur.execute(f"SELECT * FROM tbl_services ORDER BY id ASC")
+            self.cur.execute(f"SELECT * FROM tbl_products ORDER BY id ASC")
             res = self.cur.fetchall()
         else:
-            self.cur.execute(f"SELECT * FROM tbl_services WHERE id={id}")
+            self.cur.execute(f"SELECT * FROM tbl_products WHERE id={id}")
             res = self.cur.fetchone()
 
         return res
+    
+    def get_services(self, id):
+        if id == "all":
+            self.cur.execute(f"SELECT * FROM tbl_products ORDER BY id ASC")
+            res = self.cur.fetchall()
+        else:
+            self.cur.execute(f"SELECT * FROM tbl_products WHERE id={id}")
+            res = self.cur.fetchone()
+
+        return res
+    
+    def get_booking(self, id):
+        
+        self.cur.execute(f"""SELECT B.id, B.mode, B.timestamp AS sched_date, B.status, BT.* FROM tbl_booking B 
+                         LEFT JOIN tbl_book_tracking BT ON B.id=BT.booking_id 
+                         WHERE B.user_id={id} ORDER BY B.timestamp DESC""")
+        res = self.cur.fetchall()
+        
+        return res
+    
+    def get_booking_details(self, id):
+        
+        self.cur.execute(f"""SELECT B.*, BT.* FROM tbl_booking B 
+                         LEFT JOIN tbl_book_tracking BT ON B.id=BT.booking_id 
+                         WHERE B.id={id}""")
+        res1 = self.cur.fetchall()
+
+        self.cur.execute(f"""SELECT P.*, BI.quantity AS item_qty FROM tbl_booking_items BI 
+                         LEFT JOIN tbl_products P ON BI.service_id=P.id 
+                         WHERE BI.booking_id={id}""")
+        res2 = self.cur.fetchall()
+        
+        return [res1, res2]
     
     def get_addons(self, id):
         if id == "all":
@@ -418,15 +417,21 @@ class db_strg:
         return res
     
     def get_user_points(self, id):
-        
+    
         self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_earned WHERE user_id={id}")
-        res_earned = self.cur.fetchone()['sum']
+        try:
+            res_earned = self.cur.fetchone()['sum']
+        except:
+            res_earned = 0
         
         if res_earned == None:
             res_earned = 0
 
         self.cur.execute(f"SELECT SUM(amount) FROM tbl_pts_used WHERE user_id={id}")
-        res_used = self.cur.fetchone()['sum']
+        try:
+            res_used = self.cur.fetchone()['sum']
+        except:
+            res_used = 0
         
         if res_used == None:
             res_used = 0
@@ -468,18 +473,10 @@ class db_strg:
     
     # new mod
 
-    def get_booking(self, arr):
-        if arr['type'] == "all":
-            self.cur.execute(f"SELECT * FROM tbl_booking WHERE user_id={arr['id']} ORDER BY {arr['sort']}")
-        else:
-            self.cur.execute(f"SELECT * FROM tbl_booking WHERE id={arr['id']} ORDER BY {arr['sort']}")
-
-        res = self.cur.fetchall()
-        
-        return res
+    
     
     def get_booking_services(self, arr):
-        self.cur.execute(f"""SELECT BA.* FROM tbl_users U 
+        self.cur.execute(f"""SELECT BA.*, B.timestamp FROM tbl_users U 
                          LEFT OUTER JOIN tbl_booking B ON B.user_id=U.id 
                          LEFT OUTER JOIN tbl_booking_addon BA ON BA.booking_id=B.id 
                          WHERE U.id={arr['id']} ORDER BY {arr['sort']}""")
@@ -511,13 +508,13 @@ class db_strg:
     
     # new mod
     
-    def get_booked_services(self, arr):
+    def get_booked_services(self):
         # self.cur.execute(f"""SELECT B.*, BA.*, U.id AS uid, U.email AS eadd FROM tbl_booking B 
         #                  LEFT OUTER JOIN tbl_users U ON B.user_id=U.id 
         #                  LEFT OUTER JOIN tbl_booking_addon BA ON B.id=BA.booking_id
         #                  """+arr['filter'])
 
-        self.cur.execute(f"SELECT * FROM tbl_booking {arr['filter']}")
+        self.cur.execute(f"SELECT * FROM tbl_booking ORDER BY timestamp DESC")
         res = self.cur.fetchall()
         
         return res
@@ -533,6 +530,7 @@ class db_strg:
     def set_booked_threads(self, arr):
         res = "valid"
         try:
+            self.cur.execute(f"UPDATE tbl_threads SET viewed='{arr['user_id']}' WHERE id={arr['thread_id']}")
             sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp) VALUES (\'{arr['thread_id']}\', \'{arr['user_id']}\', \'{arr['message']}\', \'{self.get_datetime()}\')"
             self.cur.execute(sql)
             self.conn.commit()
@@ -675,7 +673,7 @@ class db_strg:
 
         return res
 
-    def mod_tbl_bookings(self, act, arr):
+    def mod_tbl_bookings(self, act, arr, arr2):
         if act == "Delete":
             res = "valid"
             try:
@@ -692,8 +690,8 @@ class db_strg:
         elif act == "Update": 
             res = "valid"
             try:
-                self.cur.execute(f"UPDATE tbl_booking SET quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
-                stat_arr = {'Pending':'sched','Accepted':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','To Receive':'outgoing','Completed':'completed','Cancelled':'cancelled'}
+                self.cur.execute(f"UPDATE tbl_booking SET status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
+                stat_arr = {'Pending':'sched','Confirmed':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','To Receive':'outgoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
                 if arr['status'] == "Delivery" or arr['status'] == "To Receive":
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
@@ -702,6 +700,17 @@ class db_strg:
                         sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,status,timestamp,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','',0,'')"
                         self.cur.execute(sql)
                     #print((self.cur.fetchone())['id'])
+                
+                for item in arr2:
+                    self.cur.execute(f"UPDATE tbl_booking_items SET quantity={item['qty']} WHERE booking_id={arr['booking_id']} AND service_id={item['service_id']} RETURNING quantity")    
+                    upres = self.cur.fetchone()
+                    
+                    if upres == None:
+                        self.cur.execute(f"INSERT INTO tbl_booking_items (booking_id,service_id,quantity) VALUES ({arr['booking_id']},{item['service_id']},{item['qty']})")
+                    else:
+                        if item['qty'] == 0:
+                            self.cur.execute(f"DELETE FROM tbl_booking_items WHERE booking_id={arr['booking_id']} AND service_id={item['service_id']}")
+
                 self.conn.commit()
             except:
                 res = "invalid"
@@ -780,6 +789,34 @@ class db_strg:
                             WHERE P.id={id} ORDER BY P.timestamp DESC""")
             res = self.cur.fetchall()
         
+        return res
+
+    def mod_tbl_products(self, act, arr):
+        if act == "Add":
+            try:
+                sql = f"INSERT INTO tbl_products (title, description, price, quantity, unit, prod_type, status) VALUES (\'{arr['title']}\', \'{arr['description']}\', \'{arr['price']}\', \'{arr['quantity']}\', \'{arr['unit']}\', \'{arr['prod_type']}\', \'{arr['status']}\') RETURNING id"
+                self.cur.execute(sql)
+                self.conn.commit()
+                res = (self.cur.fetchone())['id']
+            except:
+                res = "invalid"
+        elif act == "Update":
+            res = "valid"
+            try:
+                self.cur.execute(f"UPDATE tbl_products SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', prod_type='{arr['prod_type']}', status='{arr['status']}' WHERE id={arr['id']}")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        elif act == "Delete":
+            res = "valid"
+            try:
+                self.cur.execute(f"DELETE FROM tbl_products WHERE id={arr['id']}")
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+
         return res
     
     def mod_tbl_services(self, act, arr):
