@@ -365,7 +365,13 @@ class db_strg:
     
     def get_admin_products(self, id):
         if id == "all":
-            self.cur.execute(f"SELECT * FROM tbl_products ORDER BY id ASC")
+            self.cur.execute(f"SELECT * FROM tbl_products ORDER BY id DESC")
+            res = self.cur.fetchall()
+        elif id == "services":
+            self.cur.execute(f"SELECT * FROM tbl_products WHERE prod_type<>'addons' ORDER BY id DESC")
+            res = self.cur.fetchall()
+        elif id == "addons":
+            self.cur.execute(f"SELECT * FROM tbl_products WHERE prod_type='addons' ORDER BY id DESC")
             res = self.cur.fetchall()
         else:
             self.cur.execute(f"SELECT * FROM tbl_products WHERE id={id}")
@@ -519,10 +525,10 @@ class db_strg:
         
         return res
     
-    def get_completed_bookings(self):
+    def get_all_bookings(self, arr):
         self.cur.execute(f"""SELECT B.schedule, BT.sched FROM tbl_booking B 
                          LEFT OUTER JOIN tbl_book_tracking BT ON B.id=BT.booking_id 
-                         WHERE B.status='Completed'""")
+                         WHERE BT.sched >= '{arr['point_a']}' AND BT.sched <= '{arr['point_b']}' AND B.status<>'Cancelled'""")
         res = self.cur.fetchall()
         
         return res
@@ -678,7 +684,7 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"DELETE FROM tbl_booking WHERE id = '{arr['booking_id']}'")
-                self.cur.execute(f"DELETE FROM tbl_booking_addon WHERE booking_id = '{arr['booking_id']}'")
+                self.cur.execute(f"DELETE FROM tbl_booking_items WHERE booking_id = '{arr['booking_id']}'")
                 self.cur.execute(f"DELETE FROM tbl_book_tracking WHERE booking_id = '{arr['booking_id']}'")
                 self.cur.execute(f"DELETE FROM tbl_payments WHERE booking_id = '{arr['booking_id']}'")
                 self.cur.execute(f"DELETE FROM tbl_threads WHERE booking_id = '{arr['booking_id']}'")
@@ -803,45 +809,53 @@ class db_strg:
         elif act == "Update":
             res = "valid"
             try:
-                self.cur.execute(f"UPDATE tbl_products SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', prod_type='{arr['prod_type']}', status='{arr['status']}' WHERE id={arr['id']}")
+                if arr['prod_type'] == "addons":
+                    self.cur.execute(f"UPDATE tbl_products SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', status='{arr['status']}' WHERE id={arr['id']}")
+                else:
+                    self.cur.execute(f"UPDATE tbl_products SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}' WHERE id={arr['id']}")
                 self.conn.commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
         elif act == "Delete":
             res = "valid"
+            self.cur.execute(f"SELECT service_id FROM tbl_booking_items WHERE service_id={arr['id']}")
+            exist = self.cur.fetchone()
             try:
-                self.cur.execute(f"DELETE FROM tbl_products WHERE id={arr['id']}")
-                self.conn.commit()
+                if exist == None:
+                    self.cur.execute(f"DELETE FROM tbl_products WHERE id={arr['id']}")
+                    self.conn.commit()
+                else:
+                    res = "taken"
             except:
                 res = "invalid"
                 self.conn.rollback()
 
         return res
     
-    def mod_tbl_services(self, act, arr):
-        if act == "Update":
-            res = "valid"
-            try:
-                self.cur.execute(f"UPDATE tbl_services SET sub_title='{arr['sub_title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}' WHERE id={arr['id']}")
-                self.conn.commit()
-            except:
-                res = "invalid"
-                self.conn.rollback()
+    # def mod_tbl_services(self, act, arr):
+    #     if act == "Update":
+    #         res = "valid"
+    #         try:
+    #             self.cur.execute(f"UPDATE tbl_services SET sub_title='{arr['sub_title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}' WHERE id={arr['id']}")
+    #             self.conn.commit()
+    #         except:
+    #             res = "invalid"
+    #             self.conn.rollback()
 
-        return res
+    #     return res
     
-    def mod_tbl_addons(self, act, arr):
-        if act == "Update":
-            res = "valid"
-            try:
-                self.cur.execute(f"UPDATE tbl_addons SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', status='{arr['status']}' WHERE id={arr['id']}")
-                self.conn.commit()
-            except:
-                res = "invalid"
-                self.conn.rollback()
+    # def mod_tbl_addons(self, act, arr):
+    #     if act == "Update":
+    #         res = "valid"
+    #         try:
+    #             self.cur.execute(f"UPDATE tbl_addons SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', status='{arr['status']}' WHERE id={arr['id']}")
+    #             self.conn.commit()
+    #         except:
+    #             res = "invalid"
+    #             self.conn.rollback()
 
-        return res
+    #     return res
     
     def mod_tbl_billings(self, act, arr):
         if act == "Update":
@@ -896,6 +910,19 @@ class db_strg:
             try:
                 self.cur.execute(f"UPDATE tbl_users SET status='{arr['status']}' WHERE id={arr['id']}")
                 self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        elif act == "Delete":
+            res = "valid"
+            self.cur.execute(f"SELECT id FROM tbl_booking WHERE user_id={arr['id']}")
+            exist = self.cur.fetchone()
+            try:
+                if exist == None:
+                    self.cur.execute(f"DELETE FROM tbl_users WHERE id={arr['id']}")
+                    self.conn.commit()
+                else:
+                    res = "taken"
             except:
                 res = "invalid"
                 self.conn.rollback()

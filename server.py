@@ -34,10 +34,17 @@ def active_bookings():
     res = db_con.get_booked_services()
     return jsonify(res)
 
-@app.route('/completed_bookings') 
-def completed_bookings(): 
-    res = db_con.get_completed_bookings()
-    return jsonify(res)
+@app.route('/get_all_bookings/<cnd>') 
+def get_all_bookings(cnd): 
+    res = "invalid"
+    arr = json.loads(cnd)
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.get_all_bookings(arr)
+
+    if res != "invalid":
+        return jsonify(res)
+    else:
+        return res
 
 @app.route('/server-datetime') 
 def server_datetime(): 
@@ -303,7 +310,7 @@ def mod_tbl_bookings():
     if json_data['tok'] == app.config['SECRET_KEY']:
         res = db_con.mod_tbl_bookings(json_data['act'], json_data['data'], json_data['items'])
     else:
-        res = {"res":"invalid"}
+        res = "invalid"
     
     return jsonify(res) 
 
@@ -313,29 +320,39 @@ def mod_tbl_rewards():
     if json_data['tok'] == app.config['SECRET_KEY']:
         res = db_con.mod_tbl_rewards(json_data['act'], json_data['data'])
     else:
-        res = {"res":"invalid"}
+        res = "invalid"
     
     return jsonify(res) 
 
-@app.route('/mod_tbl_services/', methods = ['POST']) 
-def mod_tbl_services(): 
+@app.route('/mod_tbl_products', methods = ['POST']) 
+def mod_tbl_products(): 
     json_data = request.get_json()
     if json_data['tok'] == app.config['SECRET_KEY']:
-        res = db_con.mod_tbl_services(json_data['act'], json_data['data'])
+        res = db_con.mod_tbl_products(json_data['act'], json_data['data'])
     else:
-        res = {"res":"invalid"}
+        res = "invalid"
     
     return jsonify(res) 
 
-@app.route('/mod_tbl_addons/', methods = ['POST']) 
-def mod_tbl_addons(): 
-    json_data = request.get_json()
-    if json_data['tok'] == app.config['SECRET_KEY']:
-        res = db_con.mod_tbl_addons(json_data['act'], json_data['data'])
-    else:
-        res = {"res":"invalid"}
+# @app.route('/mod_tbl_services/', methods = ['POST']) 
+# def mod_tbl_services(): 
+#     json_data = request.get_json()
+#     if json_data['tok'] == app.config['SECRET_KEY']:
+#         res = db_con.mod_tbl_services(json_data['act'], json_data['data'])
+#     else:
+#         res = {"res":"invalid"}
     
-    return jsonify(res) 
+#     return jsonify(res) 
+
+# @app.route('/mod_tbl_addons/', methods = ['POST']) 
+# def mod_tbl_addons(): 
+#     json_data = request.get_json()
+#     if json_data['tok'] == app.config['SECRET_KEY']:
+#         res = db_con.mod_tbl_addons(json_data['act'], json_data['data'])
+#     else:
+#         res = {"res":"invalid"}
+    
+#     return jsonify(res) 
 
 @app.route('/mod_tbl_billings/', methods = ['POST']) 
 def mod_tbl_billings(): 
@@ -343,7 +360,7 @@ def mod_tbl_billings():
     if json_data['tok'] == app.config['SECRET_KEY']:
         res = db_con.mod_tbl_billings(json_data['act'], json_data['data'])
     else:
-        res = {"res":"invalid"}
+        res = "invalid"
     
     return jsonify(res) 
 
@@ -353,7 +370,7 @@ def mod_tbl_users():
     if json_data['tok'] == app.config['SECRET_KEY']:
         res = db_con.mod_tbl_users(json_data['act'], json_data['data'])
     else:
-        res = {"res":"invalid"}
+        res = "invalid"
     
     return jsonify(res) 
 
