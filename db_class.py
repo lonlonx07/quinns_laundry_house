@@ -175,18 +175,6 @@ class db_strg:
             except:
                 self.conn.rollback()
 
-            try:
-                self.cur.execute('''ALTER TABLE tbl_shop ADD COLUMN owner TEXT''')
-                self.conn.commit()
-            except:
-                self.conn.rollback()
-
-            try:
-                self.cur.execute('''ALTER TABLE tbl_shop ADD COLUMN tin TEXT''')
-                self.conn.commit()
-            except:
-                self.conn.rollback()
-
         except:
             print("Database connection error!")  
 
@@ -311,8 +299,19 @@ class db_strg:
             
         return res 
     
+    def cancel_booking(self, id):
+        try:
+            res = self.cur.execute(f"UPDATE tbl_booking SET status='Cancelled' WHERE id={id}")
+            self.conn.commit()
+            res = "valid"
+        except:
+            res = "invalid"
+            self.conn.rollback()
+        
+        return res 
+
     def validate_user(self, arr):
-        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{arr['upass']}'")
+        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{arr['upass']}' AND status='Active'")
         res = self.cur.fetchone()
         if res == None:
             res = "invalid"
@@ -857,9 +856,10 @@ class db_strg:
             try:
                 if exist == None:
                     self.cur.execute(f"DELETE FROM tbl_products WHERE id={arr['id']}")
-                    self.conn.commit()
                 else:
+                    self.cur.execute(f"UPDATE tbl_products SET status='Deleted' WHERE id={arr['id']}")
                     res = "taken"
+                self.conn.commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -953,9 +953,11 @@ class db_strg:
             try:
                 if exist == None:
                     self.cur.execute(f"DELETE FROM tbl_users WHERE id={arr['id']}")
-                    self.conn.commit()
                 else:
+                    self.cur.execute(f"UPDATE tbl_users SET user_name='', email='' WHERE id={arr['id']}")
                     res = "taken"
+
+                self.conn.commit()
             except:
                 res = "invalid"
                 self.conn.rollback()

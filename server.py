@@ -104,6 +104,15 @@ def set_booking(booking_data):
     res = db_con.create_booking(arr)
     return jsonify(res) 
 
+@app.route('/cancel_booking/<cnd>', methods = ['POST']) 
+def cancel_booking(cnd): 
+    res = "invalid"
+    arr = json.loads(cnd)
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.cancel_booking(arr['id'])
+
+    return res
+
 @app.route('/addons/<id>', methods = ['GET']) 
 def addons(id): 
     rows = db_con.get_addons(id)
