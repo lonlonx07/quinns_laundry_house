@@ -133,7 +133,7 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_shop (shop_name TEXT, address TEXT, contact TEXT, fb_page TEXT, logistics NUMERIC, free_threshold NUMERIC, 
+                self.cur.execute('''CREATE TABLE tbl_shop (shop_name TEXT, owner TEXT, tin TEXT, address TEXT, contact TEXT, fb_page TEXT, logistics NUMERIC, free_threshold NUMERIC, 
                                  sunday TEXT, sun_stat TEXT,
                                  monday TEXT, mon_stat TEXT,
                                  tuesday TEXT, tue_stat TEXT,
@@ -144,8 +144,10 @@ class db_strg:
                                  );''')
                 
                 sql = f"""
-                INSERT INTO tbl_shop (shop_name,address,contact,fb_page,logistics,free_threshold,sunday,sun_stat,monday,mon_stat,tuesday,tue_stat,wednesday,wed_stat,thursday,thu_stat,friday,fri_stat,saturday,sat_stat) VALUES (
+                INSERT INTO tbl_shop (shop_name,owner,tin,address,contact,fb_page,logistics,free_threshold,sunday,sun_stat,monday,mon_stat,tuesday,tue_stat,wednesday,wed_stat,thursday,thu_stat,friday,fri_stat,saturday,sat_stat) VALUES (
                 'Quinns Laundry House',
+                'Marian R. Francisco',
+                '487-529-480-00000',
                 'Zone 6, Bagong Sirang San Felipe, Naga City / beside Blue Spring Water Refilling Station',
                 '+639761082555',
                 'https://www.facebook.com/quinns.laundryhouse',
@@ -170,6 +172,18 @@ class db_strg:
                 self.cur.execute(sql)
                 self.conn.commit()
 
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''ALTER TABLE tbl_shop ADD COLUMN owner TEXT''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''ALTER TABLE tbl_shop ADD COLUMN tin TEXT''')
+                self.conn.commit()
             except:
                 self.conn.rollback()
 
@@ -277,7 +291,7 @@ class db_strg:
         return res 
     
     def create_booking(self, arr):
-        sql = f"INSERT INTO tbl_booking (user_id, schedule, mode, client, contact, pickup_loc, quantity, unit, timestamp, status, notes) VALUES (\'{arr['uid']}\', \'{arr['sched']}\', \'{arr['mode']}\', \'{arr['client']}\', \'{arr['contact']}\', \'{arr['ploc']}\', '', '', \'{self.get_datetime()}\', 'Pending', \'{arr['notes']}\') RETURNING id"
+        sql = f"INSERT INTO tbl_booking (user_id, schedule, mode, client, contact, pickup_loc, quantity, unit, timestamp, status, notes) VALUES (\'{arr['uid']}\', \'{arr['sched']}\', \'{arr['mode']}\', \'{arr['client']}\', \'{arr['contact']}\', \'{arr['ploc']}\', \'{arr['quantity']}\', '', \'{self.get_datetime()}\', 'Pending', \'{arr['notes']}\') RETURNING id"
         
         try:
             self.cur.execute(sql)
@@ -565,6 +579,8 @@ class db_strg:
         try:    
             self.cur.execute(f"""UPDATE tbl_shop SET 
                             shop_name = '{arr['shop_name']}',
+                            owner = '{arr['owner']}',
+                            tin = '{arr['tin']}',
                             address = '{arr['address']}',
                             contact = '{arr['contact']}',
                             fb_page = '{arr['fb_page']}',
@@ -703,7 +719,7 @@ class db_strg:
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
                     res = self.cur.fetchone()
                     if res == None:
-                        sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,status,timestamp,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','',0,'')"
+                        sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,timestamp,status,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','Unpaid',0,'')"
                         self.cur.execute(sql)
                     #print((self.cur.fetchone())['id'])
                 
@@ -783,17 +799,34 @@ class db_strg:
         return res
     
     def get_billing_payments(self, id):
-        if id == "all":
-            self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
+        if id == "All":
+            self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee, B.quantity AS basket_qty FROM tbl_payments P 
                             LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
                             ORDER BY P.id DESC""")
             res = self.cur.fetchall()
-        else:
-            self.cur.execute(f"""SELECT BA.*, B.quantity, B.unit FROM tbl_payments P 
+        elif id == "Paid":
+            self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
                             LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
-                            LEFT OUTER JOIN tbl_booking_addon BA ON P.booking_id=BA.booking_id 
-                            WHERE P.id={id} ORDER BY P.timestamp DESC""")
+                            WHERE P.status='{id}' ORDER BY P.id DESC""")
             res = self.cur.fetchall()
+        elif id == "Unpaid":
+            self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
+                            LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
+                            WHERE P.status='{id}' ORDER BY P.id DESC""")
+            res = self.cur.fetchall()
+        else:
+            self.cur.execute(f"""SELECT B.* FROM tbl_booking B 
+                            LEFT OUTER JOIN tbl_payments P ON B.id=P.booking_id 
+                            WHERE P.id={id}""")
+            res1 = self.cur.fetchone()
+
+            self.cur.execute(f"""SELECT P.*, BI.quantity AS item_qty FROM tbl_products P 
+                            LEFT OUTER JOIN tbl_booking_items BI ON P.id=BI.service_id 
+                            LEFT OUTER JOIN tbl_payments PY ON BI.booking_id=PY.booking_id
+                            WHERE PY.id={id}""")
+            res2 = self.cur.fetchall()
+
+            res = [res1, res2]
         
         return res
 

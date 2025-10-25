@@ -5,8 +5,8 @@ self_service::Regular Wash::Wash 38 mins (min 4kg, max 7kg)::60.00::7::kg::Activ
 self_service::Premium Wash::Wash 48 mins (min 4kg, max 7kg)::80.00::7::kg::Active
 self_service::Normal Dry::Dry Medium Temperature (min 4kg, max 7kg)::40.00::7::kg::Active
 self_service::Heavy Dry::Dry High Temperature (min 4kg, max 7kg)::50.00::7::kg::Active
-addons::Addon Fold::Fold::30.00::1::none::Active
-addons::Addon Plastic::Plastic::5.00::1::none::Active
-addons::Addon Detergent::Detergent::15.00::1::none::Active
-addons::Addon Fabric Conditioner::Fabric Conditioner::10.00::1::none::Active
+addons::Fold::Addon Fold::30.00::1::none::Active
+addons::Plastic::Addon Plastic::5.00::1::none::Active
+addons::Detergent::Addon Detergent::15.00::1::none::Active
+addons::Fabric Conditioner::Addon Fabric Conditioner::10.00::1::none::Active
 addons::Addon Time::10 minutes dry::10.00::1::none::Active
