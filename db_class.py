@@ -75,7 +75,7 @@ class db_strg:
                 self.conn.rollback() 
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT, dropoff_time TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -146,7 +146,7 @@ class db_strg:
                 sql = f"""
                 INSERT INTO tbl_shop (shop_name,owner,tin,address,contact,fb_page,logistics,free_threshold,sunday,sun_stat,monday,mon_stat,tuesday,tue_stat,wednesday,wed_stat,thursday,thu_stat,friday,fri_stat,saturday,sat_stat) VALUES (
                 'Quinns Laundry House',
-                'Marian R. Francisco',
+                'Marian Ricafort',
                 '487-529-480-00000',
                 'Zone 6, Bagong Sirang San Felipe, Naga City / beside Blue Spring Water Refilling Station',
                 '+639761082555',
@@ -172,6 +172,12 @@ class db_strg:
                 self.cur.execute(sql)
                 self.conn.commit()
 
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN dropoff_time TEXT''')
+                self.conn.commit()
             except:
                 self.conn.rollback()
 
@@ -258,10 +264,10 @@ class db_strg:
             print("Error sending notification", e)            
 
     def create_user(self, arr):
-        self.cur.execute(f"SELECT id, user_name, email from tbl_users WHERE user_name='{arr['uname']}' OR email='{arr['email']}'")
+        self.cur.execute(f"SELECT id, email from tbl_users WHERE email='{arr['email']}'")
         res = self.cur.fetchone()
         if res == None:
-            sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['uname']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Pending') RETURNING id"
+            sql = f"INSERT INTO tbl_users (user_name,password,email,first_name,last_name,address,mobile_no,timestamp,status) VALUES (\'{arr['email']}\', \'{arr['upass']}\', \'{arr['email']}\', \'{arr['fname']}\', \'{arr['lname']}\', \'{arr['addr']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', 'Active') RETURNING id"
             try:
                 self.cur.execute(sql)
                 id = (self.cur.fetchone())['id']
@@ -271,15 +277,13 @@ class db_strg:
                 res = "invalid"
                 self.conn.rollback()
         else:
-            if res['user_name'] == arr['uname']:
-                res = "user_name"
-            elif res['email'] == arr['email']:
+            if res['email'] == arr['email']:
                 res = "email"
 
         return res 
     
     def create_booking(self, arr):
-        sql = f"INSERT INTO tbl_booking (user_id, schedule, mode, client, contact, pickup_loc, quantity, unit, timestamp, status, notes) VALUES (\'{arr['uid']}\', \'{arr['sched']}\', \'{arr['mode']}\', \'{arr['client']}\', \'{arr['contact']}\', \'{arr['ploc']}\', \'{arr['quantity']}\', '', \'{self.get_datetime()}\', 'Pending', \'{arr['notes']}\') RETURNING id"
+        sql = f"INSERT INTO tbl_booking (user_id, schedule, mode, client, contact, pickup_loc, quantity, unit, timestamp, status, notes, dropoff_time) VALUES (\'{arr['uid']}\', \'{arr['sched']}\', \'{arr['mode']}\', \'{arr['client']}\', \'{arr['contact']}\', \'{arr['ploc']}\', \'{arr['quantity']}\', '', \'{self.get_datetime()}\', 'Pending', \'{arr['notes']}\', \'{arr['dt']}\') RETURNING id"
         
         try:
             self.cur.execute(sql)
@@ -311,7 +315,7 @@ class db_strg:
         return res 
 
     def validate_user(self, arr):
-        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE user_name='{arr['uname']}' AND password='{arr['upass']}' AND status='Active'")
+        self.cur.execute(f"SELECT id, password, first_name, last_name, address, mobile_no, status from tbl_users WHERE email='{arr['email']}' AND password='{arr['upass']}' AND status='Active'")
         res = self.cur.fetchone()
         if res == None:
             res = "invalid"
@@ -327,17 +331,30 @@ class db_strg:
         return res
     
     def reset_password(self, arr):
-        if self.otp_list[arr['user_id']] == arr['otp']:
+        # if self.otp_list[arr['user_id']] == arr['otp']:
+        #     try:
+        #         res = self.cur.execute(f"UPDATE tbl_users SET password='{arr['upass']}' WHERE id={arr['user_id']}")
+        #         self.conn.commit()
+        #         self.otp_list.pop(arr['user_id'])
+        #         res = "valid"
+        #     except:
+        #         res = "invalid"
+        #         self.conn.rollback()
+        # else:
+        #     res = "invalid"
+
+        self.cur.execute(f"SELECT id from tbl_users WHERE user_name='{arr['email']}'")
+        res = self.cur.fetchone()
+        if res == None:
+            res = "invalid"
+        else:
             try:
-                res = self.cur.execute(f"UPDATE tbl_users SET password='{arr['upass']}' WHERE id={arr['user_id']}")
+                res = self.cur.execute(f"UPDATE tbl_users SET password='{arr['upass']}' WHERE email='{arr['email']}'")
                 self.conn.commit()
-                self.otp_list.pop(arr['user_id'])
                 res = "valid"
             except:
                 res = "invalid"
                 self.conn.rollback()
-        else:
-            res = "invalid"
         
         return res
     
@@ -539,7 +556,7 @@ class db_strg:
         return res
     
     def get_all_bookings(self, arr):
-        self.cur.execute(f"""SELECT B.schedule, BT.sched FROM tbl_booking B 
+        self.cur.execute(f"""SELECT B.client, B.contact, B.pickup_loc, B.mode, B.schedule, BT.sched FROM tbl_booking B 
                          LEFT OUTER JOIN tbl_book_tracking BT ON B.id=BT.booking_id 
                          WHERE BT.sched >= '{arr['point_a']}' AND BT.sched <= '{arr['point_b']}' AND B.status<>'Cancelled'""")
         res = self.cur.fetchall()

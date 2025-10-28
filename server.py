@@ -163,7 +163,7 @@ def signin(creden):
 def signup(creden): 
     arr = json.loads(creden)
     res = db_con.create_user(arr)
-    if res != "user_name" and res != "email" and res != "invalid":
+    if res != "email" and res != "invalid":
         return jsonify(res)
     else:
         return res
