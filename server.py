@@ -45,6 +45,18 @@ def get_all_bookings(cnd):
         return jsonify(res)
     else:
         return res
+    
+@app.route('/get_completed_bookings/<cnd>') 
+def get_completed_bookings(cnd): 
+    res = "invalid"
+    arr = json.loads(cnd)
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.get_completed_bookings(arr)
+
+    if res != "invalid":
+        return jsonify(res)
+    else:
+        return res
 
 @app.route('/server-datetime') 
 def server_datetime(): 
@@ -253,6 +265,11 @@ def get_admin_notifications():
     res = db_con.get_admin_notifications()
     return jsonify(res) 
 
+@app.route('/get_day_off', methods = ['GET']) 
+def get_day_off(): 
+    res = db_con.get_day_off()
+    return jsonify(res) 
+
 @app.route('/get_shop', methods = ['GET']) 
 def get_shop(): 
     res = db_con.get_shop()
@@ -263,6 +280,16 @@ def mod_tbl_shop():
     json_data = request.get_json()
     if json_data['tok'] == app.config['SECRET_KEY']:
         res = db_con.mod_tbl_shop(json_data['data'])
+    else:
+        res = {"res":"invalid"}
+    
+    return jsonify(res) 
+
+@app.route('/mod_tbl_day_off/', methods = ['POST']) 
+def mod_tbl_day_off(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_day_off(json_data['act'], json_data['data'])
     else:
         res = {"res":"invalid"}
     

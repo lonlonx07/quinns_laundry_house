@@ -127,6 +127,12 @@ class db_strg:
                 self.conn.rollback()
 
             try:
+                self.cur.execute('''CREATE TABLE tbl_day_off (sched_date TEXT, description TEXT);''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
                 self.cur.execute('''CREATE TABLE tbl_book_tracking (booking_id INT, sched TEXT, accepted TEXT, pickup TEXT, drop_off TEXT, arrived TEXT, processing TEXT, outgoing TEXT, completed TEXT, cancelled TEXT);''')
                 self.conn.commit()
             except:
@@ -134,17 +140,17 @@ class db_strg:
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_shop (shop_name TEXT, owner TEXT, tin TEXT, address TEXT, contact TEXT, fb_page TEXT, logistics NUMERIC, free_threshold NUMERIC, 
-                                 sunday TEXT, sun_stat TEXT,
-                                 monday TEXT, mon_stat TEXT,
-                                 tuesday TEXT, tue_stat TEXT,
-                                 wednesday TEXT, wed_stat TEXT,
-                                 thursday TEXT, thu_stat TEXT,
-                                 friday TEXT, fri_stat TEXT,
-                                 saturday TEXT, sat_stat TEXT
+                                 sunday TEXT,
+                                 monday TEXT,
+                                 tuesday TEXT,
+                                 wednesday TEXT,
+                                 thursday TEXT,
+                                 friday TEXT,
+                                 saturday TEXT
                                  );''')
                 
                 sql = f"""
-                INSERT INTO tbl_shop (shop_name,owner,tin,address,contact,fb_page,logistics,free_threshold,sunday,sun_stat,monday,mon_stat,tuesday,tue_stat,wednesday,wed_stat,thursday,thu_stat,friday,fri_stat,saturday,sat_stat) VALUES (
+                INSERT INTO tbl_shop (shop_name,owner,tin,address,contact,fb_page,logistics,free_threshold,sunday,monday,tuesday,wednesday,thursday,friday,saturday) VALUES (
                 'Quinns Laundry House',
                 'Marian Ricafort',
                 '487-529-480-00000',
@@ -154,19 +160,12 @@ class db_strg:
                 35.0,
                 3,
                 '8:00 am-9:00 pm',
-                'open',
                 '8:00 am-9:00 pm',
-                'open',
                 '8:00 am-9:00 pm',
-                'open',
                 '8:00 am-9:00 pm',
-                'open',
                 '8:00 am-9:00 pm',
-                'open',
                 '8:00 am-9:00 pm',
-                'open',
-                '8:00 am-9:00 pm',
-                'open'
+                '8:00 am-9:00 pm'
                 )
                 """
                 self.cur.execute(sql)
@@ -387,6 +386,17 @@ class db_strg:
         if id == "all":
             self.cur.execute(f"SELECT * FROM tbl_users ORDER BY timestamp DESC")
             res = self.cur.fetchall()
+
+            self.cur.execute(f"""SELECT SUM(PE.amount), U.id FROM tbl_pts_earned PE 
+                             LEFT JOIN tbl_users U ON PE.user_id=U.id 
+                             GROUP BY U.id""")
+            res2 = self.cur.fetchall()
+            self.cur.execute(f"""SELECT SUM(PU.amount), U.id FROM tbl_pts_used PU 
+                             LEFT JOIN tbl_users U ON PU.user_id=U.id 
+                             GROUP BY U.id""")
+            res3 = self.cur.fetchall()
+
+            res = [res, res2, res3]
         else:
             self.cur.execute(f"SELECT * FROM tbl_users WHERE id={id}")
             res = self.cur.fetchone()
@@ -562,6 +572,17 @@ class db_strg:
         res = self.cur.fetchall()
         
         return res
+
+    def get_completed_bookings(self, arr):
+        self.cur.execute(f"""SELECT B.id, B.client, B.contact, B.pickup_loc, B.mode, B.schedule, BT.sched, BT.completed, P.title, PY.amount FROM tbl_booking B 
+                         LEFT OUTER JOIN tbl_payments PY ON B.id=PY.booking_id 
+                         LEFT OUTER JOIN tbl_book_tracking BT ON B.id=BT.booking_id 
+                         LEFT OUTER JOIN tbl_booking_items BI ON B.id=BI.booking_id 
+                         LEFT OUTER JOIN tbl_products P ON BI.service_id=P.id 
+                         WHERE BT.sched >= '{arr['point_a']}' AND BT.sched <= '{arr['point_b']}' AND P.prod_type<>'addons' AND PY.status='Paid' AND B.status='Completed'""")
+        res = self.cur.fetchall()
+        
+        return res
     
     def set_booked_threads(self, arr):
         res = "valid"
@@ -584,11 +605,21 @@ class db_strg:
     
     # Admin queries
 
-    def get_shop(self):
-        self.cur.execute(f"SELECT * FROM tbl_shop")
-        res = self.cur.fetchone()
+    def get_day_off(self):
+        
+        self.cur.execute(f"SELECT * FROM tbl_day_off ORDER BY sched_date ASC")
+        res = self.cur.fetchall()
 
         return res
+
+    def get_shop(self):
+        self.cur.execute(f"SELECT * FROM tbl_shop")
+        res1 = self.cur.fetchone()
+
+        self.cur.execute(f"SELECT * FROM tbl_day_off ORDER BY sched_date ASC")
+        res2 = self.cur.fetchall()
+
+        return [res1, res2]
     
     def mod_tbl_shop(self, arr):
         res = "valid"
@@ -603,21 +634,42 @@ class db_strg:
                             logistics = '{arr['logistics']}',
                             free_threshold = '{arr['free_threshold']}',
                             sunday = '{arr['sunday']}',
-                            sun_stat = '{arr['sun_stat']}',
                             monday = '{arr['monday']}',
-                            mon_stat = '{arr['mon_stat']}',
                             tuesday = '{arr['tuesday']}',
-                            tue_stat = '{arr['tue_stat']}',
                             wednesday = '{arr['wednesday']}',
-                            wed_stat = '{arr['wed_stat']}',
                             thursday = '{arr['thursday']}',
-                            thu_stat = '{arr['thu_stat']}',
                             friday = '{arr['friday']}',
-                            fri_stat = '{arr['fri_stat']}',
-                            saturday = '{arr['saturday']}',
-                            sat_stat = '{arr['sat_stat']}'
+                            saturday = '{arr['saturday']}'
                             """)
             self.conn.commit()
+        except:
+            res = "invalid"
+            self.conn.rollback()
+
+        return res
+    
+    def mod_tbl_day_off(self, act, arr):
+        res = "valid"
+        
+        try:
+
+            if act == 'add':
+                self.cur.execute(f"SELECT sched_date FROM tbl_day_off WHERE sched_date='{arr['sched_date']}'")
+                exist = self.cur.fetchone()
+                if exist == None:
+                    sql = f"INSERT INTO tbl_day_off (sched_date, description) VALUES (\'{arr['sched_date']}\', \'{arr['description']}\')"
+                else:
+                    sql = f"UPDATE tbl_day_off SET description='{arr['description']}' WHERE sched_date='{arr['sched_date']}'"
+            elif act == 'update':
+                sql = f"UPDATE tbl_day_off SET sched_date='{arr['sched_date']}', description='{arr['description']}' WHERE sched_date='{arr['sched_date']}'"
+            elif act == 'delete':
+                sql = f"DELETE FROM tbl_day_off WHERE sched_date='{arr['sched_date']}'"
+  
+            self.cur.execute(sql)
+            self.conn.commit()
+
+            self.cur.execute(f"SELECT * FROM tbl_day_off ORDER BY sched_date ASC")
+            res = self.cur.fetchall()
         except:
             res = "invalid"
             self.conn.rollback()
@@ -636,10 +688,10 @@ class db_strg:
     
     def get_thread_messages_admin(self, id):
         self.cur.execute(f"""
-                         SELECT DISTINCT TM.* FROM tbl_threads T 
+                         SELECT DISTINCT TM.*, U.first_name FROM tbl_threads T 
                          LEFT OUTER JOIN tbl_thread_messages TM ON T.id=TM.thread_id 
                          LEFT OUTER JOIN tbl_users U ON CAST(TM.sender AS INT)=U.id 
-                         WHERE T.id={id} AND T.status='Open' ORDER BY TM.timestamp DESC""")
+                         WHERE T.id={id} AND T.status='Open' ORDER BY TM.timestamp ASC""")
         res = self.cur.fetchall()
 
         return res
@@ -815,21 +867,30 @@ class db_strg:
         return res
     
     def get_billing_payments(self, id):
+        self.cur.execute(f"""SELECT SUM(P.price*BI.quantity), PY.id FROM tbl_payments PY 
+                            LEFT OUTER JOIN tbl_booking_items BI ON PY.booking_id=BI.booking_id 
+                            LEFT OUTER JOIN tbl_products P ON BI.service_id=P.id 
+                            GROUP BY PY.id""")
+        res3 = self.cur.fetchall()
+        
         if id == "All":
             self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee, B.quantity AS basket_qty FROM tbl_payments P 
                             LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
                             ORDER BY P.id DESC""")
             res = self.cur.fetchall()
+            res = [res, res3]
         elif id == "Paid":
             self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
                             LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
                             WHERE P.status='{id}' ORDER BY P.id DESC""")
             res = self.cur.fetchall()
+            res = [res, res3]
         elif id == "Unpaid":
             self.cur.execute(f"""SELECT P.*, B.user_id, B.client, B.contact, B.pickup_loc, B.logistics_fee FROM tbl_payments P 
                             LEFT OUTER JOIN tbl_booking B ON P.booking_id=B.id 
                             WHERE P.status='{id}' ORDER BY P.id DESC""")
             res = self.cur.fetchall()
+            res = [res, res3]
         else:
             self.cur.execute(f"""SELECT B.* FROM tbl_booking B 
                             LEFT OUTER JOIN tbl_payments P ON B.id=P.booking_id 
