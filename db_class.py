@@ -638,7 +638,7 @@ class db_strg:
     # new mod
     
     def get_booked_services(self):
-        self.cur.execute(f"SELECT * FROM tbl_booking ORDER BY timestamp DESC")
+        self.cur.execute(f"SELECT B.*, TO_CHAR(B.timestamp,'YYYY-MM-DD HH:MI:SS AM') timestamp FROM tbl_booking B ORDER BY B.timestamp DESC")
         res = self.cur.fetchall()
         
         return res
