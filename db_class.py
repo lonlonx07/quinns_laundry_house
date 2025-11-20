@@ -859,6 +859,7 @@ class db_strg:
                 self.cur.execute(f"DELETE FROM tbl_payments WHERE booking_id = '{arr['booking_id']}'")
                 self.cur.execute(f"DELETE FROM tbl_threads WHERE booking_id = '{arr['booking_id']}'")
                 self.cur.execute(f"DELETE FROM tbl_thread_messages TM USING tbl_threads T WHERE T.booking_id = '{arr['booking_id']}' AND TM.thread_id = T.id")
+                self.cur.execute(f"DELETE FROM tbl_rider_assigned WHERE booking_id = '{arr['booking_id']}'")
                 self.conn.commit()
             except:
                 res = "invalid"
