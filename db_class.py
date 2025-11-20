@@ -1,3 +1,4 @@
+import hashlib
 import psycopg2
 from psycopg2.extras import RealDictCursor # Or DictCursor
 import random
@@ -28,8 +29,11 @@ class db_strg:
     ntfy_list = {}
     client_ntfy_tok = {}
     client_ntfy_dat = {}
+    rider_ntfy_tok = {}
+    rider_ntfy_dat = {}
     new_msg = []
     new_booking = []
+    new_rider_completion = []
 
     def __init__(self) -> None:
         creden_arr = {}
@@ -57,25 +61,25 @@ class db_strg:
             #self.cur = self.conn.cursor()
             #conn.close()
             try:
-                self.cur.execute('''CREATE TABLE tbl_users (id SERIAL PRIMARY KEY, user_name TEXT NOT NULL, password TEXT NOT NULL, email TEXT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, address TEXT, mobile_no TEXT, timestamp TEXT, status TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_users (id SERIAL PRIMARY KEY, user_name TEXT NOT NULL, password TEXT NOT NULL, email TEXT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, address TEXT, mobile_no TEXT, timestamp TIMESTAMP, status TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amount INT, source TEXT, timestamp TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amount INT, source TEXT, timestamp TIMESTAMP);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_pts_used (user_id INT, amount INT, benefit TEXT, timestamp TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_pts_used (user_id INT, amount INT, benefit TEXT, timestamp TIMESTAMP);''')
                 self.conn.commit()
             except:
                 self.conn.rollback() 
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TEXT, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT, dropoff_time TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TIMESTAMP, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT, dropoff_time TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -97,19 +101,19 @@ class db_strg:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_threads (id SERIAL PRIMARY KEY, booking_id INT, timestamp TEXT, status TEXT, viewed TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_threads (id SERIAL PRIMARY KEY, booking_id INT, timestamp TIMESTAMP, status TEXT, viewed TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_thread_messages (thread_id INT, sender TEXT, message TEXT, timestamp TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_thread_messages (thread_id INT, sender TEXT, message TEXT, timestamp TIMESTAMP);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_payments (id SERIAL PRIMARY KEY, booking_id INT, mode TEXT, ref_num TEXT, amount NUMERIC, timestamp TEXT, status TEXT, add_charges NUMERIC, description TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_payments (id SERIAL PRIMARY KEY, booking_id INT, mode TEXT, ref_num TEXT, amount NUMERIC, timestamp TIMESTAMP, status TEXT, add_charges NUMERIC, description TEXT);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -134,6 +138,18 @@ class db_strg:
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_book_tracking (booking_id INT, sched TEXT, accepted TEXT, pickup TEXT, drop_off TEXT, arrived TEXT, processing TEXT, outgoing TEXT, completed TEXT, cancelled TEXT);''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''CREATE TABLE tbl_riders (id SERIAL PRIMARY KEY, user_name TEXT NOT NULL, password TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, address TEXT, mobile_no TEXT, timestamp TIMESTAMP, status TEXT);''')
+                self.conn.commit()
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''CREATE TABLE tbl_rider_assigned (id SERIAL PRIMARY KEY, booking_id INT, rider_id INT, task_type TEXT, status TEXT, date_assigned TIMESTAMP, date_completed TIMESTAMP);''')
                 self.conn.commit()
             except:
                 self.conn.rollback()
@@ -174,14 +190,14 @@ class db_strg:
             except:
                 self.conn.rollback()
 
-            try:
-                self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN dropoff_time TEXT''')
-                self.conn.commit()
-            except:
-                self.conn.rollback()
-
         except:
             print("Database connection error!")  
+
+    def get_hash_value(self, val):
+        h = hashlib.new("SHA256")
+        h.update(val.encode(encoding='utf-8'))
+        
+        return h.hexdigest()
 
     def send_otp(self, otp_code, recipient):
         subject = "OTP verification code"
@@ -223,39 +239,61 @@ class db_strg:
     def get_admin_notifications(self):  
         res1 = self.new_booking
         res2 = self.new_msg
+        res3 = self.new_rider_completion
         self.new_msg = []
         self.new_booking = []
+        self.new_rider_completion = []
 
-        return {'bok':res1, 'msg':res2}
+        return {'bok':res1, 'msg':res2, 'com':res3}
 
-    def clear_notification(self, uid):
+    def clear_notification(self, uid, type):
         res = "success"
         try:
-            del self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]]
+            if type == "client":
+                del self.client_ntfy_dat[self.client_ntfy_tok[int(uid)]]
+            else:
+                del self.rider_ntfy_dat[self.client_ntfy_tok[int(uid)]]
         except:
             res = "failed"
         
         return res
     
-    def set_notification_token(self, data):
-        self.client_ntfy_tok[data['id']] = data['token_id']
+    def set_notification_token(self, data, type):
+        if type == "client":
+            self.client_ntfy_tok[data['id']] = data['token_id']
+        else:
+            self.rider_ntfy_tok[data['id']] = data['token_id']
 
-    def send_notification(self, uid):
+    def send_notification(self, uid, type):
         
         try:
-            message = messaging.Message(
-                notification=messaging.Notification(
-                    title="Quinns Laundry House", #Notification Title
-                    body=self.client_ntfy_dat[self.client_ntfy_tok[uid]]['content'], #Body
-                ),
-                data={
-                    'title':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['title'],
-                    'type':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['type'],
-                    'msg':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['msg'],
-                    'id':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['id'],
-                },
-                token=self.client_ntfy_tok[uid], #DEVICE_REGISTRATION_TOKEN
-            )
+            if type == "client":
+                message = messaging.Message(
+                    notification=messaging.Notification(
+                        title="Quinns Laundry House", 
+                        body=self.client_ntfy_dat[self.client_ntfy_tok[uid]]['content'], 
+                    ),
+                    data={
+                        'title':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['title'],
+                        'type':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['type'],
+                        'msg':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['msg'],
+                        'id':self.client_ntfy_dat[self.client_ntfy_tok[uid]]['id'],
+                    },
+                    token=self.client_ntfy_tok[uid],
+                )
+            else:
+                message = messaging.Message(
+                    notification=messaging.Notification(
+                        title="Quinns Laundry House", 
+                        body=self.rider_ntfy_dat[self.rider_ntfy_tok[uid]]['content'], 
+                    ),
+                    data={
+                        'title':self.rider_ntfy_dat[self.rider_ntfy_tok[uid]]['title'],
+                        'msg':self.rider_ntfy_dat[self.rider_ntfy_tok[uid]]['msg'],
+                        'id':self.rider_ntfy_dat[self.rider_ntfy_tok[uid]]['id'],
+                    },
+                    token=self.rider_ntfy_tok[uid],
+                )
             response = messaging.send(message)  
             #print("Successfully sent message:", response)
             #del self.client_ntfy_dat[self.client_ntfy_tok[uid]]
@@ -330,18 +368,6 @@ class db_strg:
         return res
     
     def reset_password(self, arr):
-        # if self.otp_list[arr['user_id']] == arr['otp']:
-        #     try:
-        #         res = self.cur.execute(f"UPDATE tbl_users SET password='{arr['upass']}' WHERE id={arr['user_id']}")
-        #         self.conn.commit()
-        #         self.otp_list.pop(arr['user_id'])
-        #         res = "valid"
-        #     except:
-        #         res = "invalid"
-        #         self.conn.rollback()
-        # else:
-        #     res = "invalid"
-
         self.cur.execute(f"SELECT id from tbl_users WHERE user_name='{arr['email']}'")
         res = self.cur.fetchone()
         if res == None:
@@ -401,6 +427,53 @@ class db_strg:
             self.cur.execute(f"SELECT * FROM tbl_users WHERE id={id}")
             res = self.cur.fetchone()
 
+        return res
+    
+    def get_riders(self, id):
+        if id == "all":
+            self.cur.execute(f"SELECT * FROM tbl_riders ORDER BY id DESC")
+            res = self.cur.fetchall()
+        else:
+            self.cur.execute(f"SELECT * FROM tbl_riders WHERE id={id}")
+            res = self.cur.fetchone()
+
+        return res
+    
+    def get_rider_assigned(self, filter):
+        self.cur.execute(f"SELECT id, first_name, last_name, address, status FROM tbl_riders")
+        res1 = self.cur.fetchall()
+        spc_code = "TO_CHAR(RA.date_assigned,'YYYY-MM-DD HH:MI:SS') date_assigned, TO_CHAR(RA.date_completed,'YYYY-MM-DD HH:MI:SS') date_completed"
+        if filter == "All":
+            self.cur.execute(f"""SELECT RA.*, {spc_code}, B.client, B.pickup_loc FROM tbl_rider_assigned RA 
+                             LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
+                             ORDER BY RA.booking_id DESC""")
+            res = self.cur.fetchall()
+        elif filter == "Pending" or filter == "Assigned" or filter == "Completed":
+            self.cur.execute(f"""SELECT RA.*, B.client, B.pickup_loc FROM tbl_rider_assigned RA 
+                             LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
+                             WHERE RA.status='{filter}' ORDER BY RA.booking_id DESC""")
+            res = self.cur.fetchall()
+        else:
+            self.cur.execute(f"""SELECT RA.*, B.client, B.pickup_loc FROM tbl_rider_assigned RA 
+                             LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
+                             WHERE RA.id={filter}""")
+            res = self.cur.fetchone()
+        res = [res, res1]
+
+        return res
+    
+    def get_rider_task(self, id, rid):
+        if id == "all":
+            self.cur.execute(f"""SELECT RA.id, RA.booking_id, RA.task_type, RA.status, B.client, B.pickup_loc, B.contact, B.quantity FROM tbl_rider_assigned RA 
+                             LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
+                             WHERE RA.rider_id={rid} ORDER BY RA.id DESC""")
+            res = self.cur.fetchall()
+        else:
+            self.cur.execute(f"""SELECT RA.id, RA.booking_id, RA.task_type, RA.status, B.client, B.pickup_loc, B.contact, B.quantity FROM tbl_rider_assigned RA 
+                             LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
+                             WHERE RA.id={id}""")
+            res = self.cur.fetchone()
+        
         return res
     
     def get_admin_products(self, id):
@@ -492,10 +565,6 @@ class db_strg:
         return res
     
     def get_points_history(self, id):
-
-        #self.cur.execute(f"SELECT PE.*, PU.* FROM tbl_pts_earned PE INNER JOIN tbl_pts_used PU ON PE.user_id = PU.user_id WHERE PE.user_id={id} ORDER BY PE.timestamp DESC, PU.timestamp DESC")
-        #res = self.cur.fetchall()
-
         self.cur.execute(f"SELECT * FROM tbl_pts_earned WHERE user_id={id} ORDER BY timestamp DESC")
         res1 = self.cur.fetchall()
         self.cur.execute(f"SELECT * FROM tbl_pts_used WHERE user_id={id} ORDER BY timestamp DESC")
@@ -552,14 +621,23 @@ class db_strg:
             
         return res
     
+    def rider_update_field(self, arr):
+        res = "valid"
+        try:
+            if arr['field'] == "password":
+                arr['value'] = self.get_hash_value(arr['value'])
+                
+            self.cur.execute(f"UPDATE {arr['table']} SET {arr['field']}='{arr['value']}' WHERE {arr['ref_field']}={arr['ref_value']}")
+            self.conn.commit()
+        except:
+            res = "invalid"
+            self.conn.rollback()
+            
+        return res
+    
     # new mod
     
     def get_booked_services(self):
-        # self.cur.execute(f"""SELECT B.*, BA.*, U.id AS uid, U.email AS eadd FROM tbl_booking B 
-        #                  LEFT OUTER JOIN tbl_users U ON B.user_id=U.id 
-        #                  LEFT OUTER JOIN tbl_booking_addon BA ON B.id=BA.booking_id
-        #                  """+arr['filter'])
-
         self.cur.execute(f"SELECT * FROM tbl_booking ORDER BY timestamp DESC")
         res = self.cur.fetchall()
         
@@ -604,6 +682,14 @@ class db_strg:
         return res
     
     # Admin queries
+
+    def validate_rider(self, arr):
+        self.cur.execute(f"SELECT id, user_name, password, first_name, last_name, address, mobile_no, status from tbl_riders WHERE user_name='{arr['uname']}' AND password='{self.get_hash_value(arr['upass'])}' AND status='Active'")
+        res = self.cur.fetchone()
+        if res == None:
+            res = "invalid"
+        
+        return res
 
     def get_day_off(self):
         
@@ -733,7 +819,7 @@ class db_strg:
                         self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['title'] = "Admin Reply"
                         self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['msg'] = ntfy_msg
                         self.client_ntfy_dat[self.client_ntfy_tok[user_id]]['id'] = str(arr['thread_id'])
-                        self.send_notification(user_id)
+                        self.send_notification(user_id, 'client')
 
             except:
                 pass
@@ -783,6 +869,14 @@ class db_strg:
                 self.cur.execute(f"UPDATE tbl_booking SET status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
                 stat_arr = {'Pending':'sched','Confirmed':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','To Receive':'outgoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
+                
+                if arr['status'] == "Pickup" or arr['status'] == "Delivery":
+                    self.cur.execute(f"SELECT id from tbl_rider_assigned WHERE booking_id='{arr['booking_id']}' AND task_type='{arr['status']}'")
+                    exist = self.cur.fetchone()
+                    if exist == None:
+                        sql = f"INSERT INTO tbl_rider_assigned (booking_id,task_type,status) VALUES (\'{arr['booking_id']}\',\'{arr['status']}\','Pending')"
+                        self.cur.execute(sql)
+                
                 if arr['status'] == "Delivery" or arr['status'] == "To Receive":
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
                     res = self.cur.fetchone()
@@ -825,7 +919,7 @@ class db_strg:
                         self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update" #f"Booking {self.format_std_code("QLH", str(arr['booking_id']), 6)} Status: {arr['status']}"
                         self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = ntfy_msg
                         self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
-                        self.send_notification(arr['uid'])
+                        self.send_notification(arr['uid'], 'client')
 
             except:
                 pass
@@ -944,29 +1038,86 @@ class db_strg:
 
         return res
     
-    # def mod_tbl_services(self, act, arr):
-    #     if act == "Update":
-    #         res = "valid"
-    #         try:
-    #             self.cur.execute(f"UPDATE tbl_services SET sub_title='{arr['sub_title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}' WHERE id={arr['id']}")
-    #             self.conn.commit()
-    #         except:
-    #             res = "invalid"
-    #             self.conn.rollback()
+    def mod_tbl_riders(self, act, arr):
+        res = "valid"
+        
+        if act == "Add":
+            self.cur.execute(f"SELECT id FROM tbl_riders WHERE user_name='{arr['user_name']}'")
+            exist = self.cur.fetchone()
+            try:
+                if exist == None:
+                    sql = f"INSERT INTO tbl_riders (user_name, password, first_name, last_name, address, mobile_no, timestamp, status) VALUES (\'{arr['user_name']}\', \'{arr['password']}\', \'{arr['first_name']}\', \'{arr['last_name']}\', \'{arr['address']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', \'{arr['status']}\') RETURNING id"
+                    self.cur.execute(sql)
+                    self.conn.commit()
+                    res = (self.cur.fetchone())['id']
+                else:
+                    res = "exist"
+            except:
+                res = "invalid"
+        elif act == "Update":
+            self.cur.execute(f"SELECT id FROM tbl_riders WHERE user_name='{arr['user_name']}' AND id<>{arr['id']}")
+            exist = self.cur.fetchone()
+            try:
+                if exist == None:
+                    if arr['password'] == "":
+                        self.cur.execute(f"UPDATE tbl_riders SET user_name='{arr['user_name']}', first_name='{arr['first_name']}', last_name='{arr['last_name']}', address='{arr['address']}', mobile_no='{arr['mobile_no']}', status='{arr['status']}' WHERE id={arr['id']}")
+                    else:
+                        self.cur.execute(f"UPDATE tbl_riders SET user_name='{arr['user_name']}', password='{arr['password']}', first_name='{arr['first_name']}', last_name='{arr['last_name']}', address='{arr['address']}', mobile_no='{arr['mobile_no']}', status='{arr['status']}' WHERE id={arr['id']}")
+                    self.conn.commit()
+                else:
+                    res = "exist"
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        elif act == "Delete":
+            self.cur.execute(f"SELECT id FROM tbl_rider_assigned WHERE rider_id={arr['id']}")
+            exist = self.cur.fetchone()
+            try:
+                if exist == None:
+                    self.cur.execute(f"DELETE FROM tbl_riders WHERE id={arr['id']}") 
+                else:
+                    self.cur.execute(f"UPDATE tbl_riders SET status='Inactive' WHERE id={arr['id']}")
+                    res = "taken"
+                self.conn.commit()
+            except:
+                res = "invalid"
+                self.conn.rollback()
 
-    #     return res
+        return res
     
-    # def mod_tbl_addons(self, act, arr):
-    #     if act == "Update":
-    #         res = "valid"
-    #         try:
-    #             self.cur.execute(f"UPDATE tbl_addons SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', status='{arr['status']}' WHERE id={arr['id']}")
-    #             self.conn.commit()
-    #         except:
-    #             res = "invalid"
-    #             self.conn.rollback()
-
-    #     return res
+    def mod_tbl_rider_assigned(self, act, arr):
+        res = "valid"
+        
+        if act == "Update":
+            try:
+                self.cur.execute(f"UPDATE tbl_rider_assigned SET rider_id='{arr['rider_id']}', status='{arr['status']}', date_assigned='{self.get_datetime()}' WHERE id={arr['id']}")
+                self.conn.commit()
+                try:
+                    self.rider_ntfy_dat[self.rider_ntfy_tok[arr['rider_id']]] = {}
+                    self.rider_ntfy_dat[self.rider_ntfy_tok[arr['rider_id']]]['content'] = f"New task has been assigned to you."
+                    self.rider_ntfy_dat[self.rider_ntfy_tok[arr['rider_id']]]['title'] = "New Task"
+                    self.rider_ntfy_dat[self.rider_ntfy_tok[arr['rider_id']]]['msg'] = arr['task']
+                    self.rider_ntfy_dat[self.rider_ntfy_tok[arr['rider_id']]]['id'] = str(id)
+                    self.send_notification(arr['rider_id'], 'rider') 
+                except:
+                    pass
+            except:
+                res = "invalid"
+                self.conn.rollback()
+        
+        return res
+    
+    def set_rider_assigned(self, id, status):
+        res = "valid"
+        try:
+            self.cur.execute(f"UPDATE tbl_rider_assigned SET status='{status}', date_completed='{self.get_datetime()}' WHERE id={id}")
+            self.conn.commit()
+            self.new_rider_completion.insert(0, id)
+        except:
+            res = "invalid"
+            self.conn.rollback()
+        
+        return res
     
     def mod_tbl_billings(self, act, arr):
         if act == "Update":
@@ -1009,7 +1160,7 @@ class db_strg:
                         self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['title'] = "Booking Update"
                         self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['msg'] = "Completed"
                         self.client_ntfy_dat[self.client_ntfy_tok[arr['uid']]]['id'] = str(arr['booking_id'])
-                        self.send_notification(arr['uid'])
+                        self.send_notification(arr['uid'], 'client')
                 except:
                     pass
 

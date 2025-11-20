@@ -12,7 +12,13 @@ app.config['SECRET_KEY'] = "qlh-20080104"
 @app.route('/ntfy_reg_device/<data>', methods = ['POST'])
 def ntfy_reg_device(data):
     arr = json.loads(data)
-    res = db_con.set_notification_token(arr)
+    res = db_con.set_notification_token(arr, 'client')
+    return f"Device token: {arr['token_id']}"
+
+@app.route('/ntfy_reg_device_rider/<data>', methods = ['POST'])
+def ntfy_reg_device_rider(data):
+    arr = json.loads(data)
+    res = db_con.set_notification_token(arr, 'rider')
     return f"Device token: {arr['token_id']}"
 
 @app.route('/') 
@@ -25,7 +31,13 @@ def filtered_booking(filter):
 
 @app.route('/clear_notification/<id>', methods = ['GET']) 
 def clear_notification(id): 
-    res = db_con.clear_notification(id)
+    res = db_con.clear_notification(id, 'client')
+    
+    return res
+
+@app.route('/clear_notification_rider/<id>', methods = ['GET']) 
+def clear_notification_rider(id): 
+    res = db_con.clear_notification(id, 'rider')
     
     return res
 
@@ -66,10 +78,7 @@ def server_datetime():
 
 @app.route('/users/<id>', methods = ['GET']) 
 def users(id): 
-    #con = sqlite3.connect("./db/mktg_data.db")
-    #data = con.custom_query("get", "SELECT * FROM tbl_products WHERE status='Active' ORDER BY product_name ASC", "*")
     rows = db_con.get_user(id)
-   
     return jsonify(rows)
 
 @app.route('/services/<data>', methods = ['GET']) 
@@ -104,9 +113,6 @@ def get_booking_details(cnd):
     if arr['key'] == app.config['SECRET_KEY']:
         res = db_con.get_booking_details(arr['id'])
 
-    # if res != "invalid":
-    #     return res
-    # else:
     return res
     
 @app.route('/set_booking/<booking_data>', methods = ['POST']) 
@@ -162,6 +168,13 @@ def update_field(data):
     
     return res
 
+@app.route('/rider_update_field/<data>', methods = ['POST']) 
+def rider_update_field(data): 
+    arr = json.loads(data)
+    res = db_con.rider_update_field(arr)
+    
+    return res
+
 @app.route('/signin/<creden>', methods = ['POST']) 
 def signin(creden): 
     arr = json.loads(creden)
@@ -204,56 +217,55 @@ def reset_password(creden):
 def get_otp(creden): 
     arr = json.loads(creden)
     res = db_con.retrieve_otp(arr)
+
     return res
 
-# @app.route('/get_booking/<booking_data>', methods = ['GET']) 
-# def get_booking(booking_data): 
-#     arr = json.loads(booking_data)
-    
-#     res = db_con.get_booked_services(arr)
-#     return jsonify(res) 
-
 # new mod
-
 @app.route('/get_booking_services/<cnd>', methods = ['GET']) 
 def get_booking_services(cnd): 
     arr = json.loads(cnd)
-    
     res = db_con.get_booking_services(arr)
+
     return jsonify(res) 
 
 @app.route('/get_booking_tracks/<cnd>', methods = ['GET']) 
 def get_booking_tracks(cnd): 
     arr = json.loads(cnd)
-    
     res = db_con.get_booking_tracks(arr)
+
     return jsonify(res) 
 
 @app.route('/get_booking_payments/<cnd>', methods = ['GET']) 
 def get_booking_payments(cnd): 
     arr = json.loads(cnd)
-    
     res = db_con.get_booking_payments(arr)
-    return jsonify(res) 
 
+    return jsonify(res) 
 # new mod
 
 @app.route('/get_threads/<threads_data>', methods = ['GET']) 
 def get_threads(threads_data): 
     arr = json.loads(threads_data)
-    
     res = db_con.get_booked_threads(arr)
+
     return jsonify(res) 
 
 @app.route('/set_threads/<threads_data>', methods = ['POST']) 
 def set_threads(threads_data): 
     arr = json.loads(threads_data)
-    
     res = db_con.set_booked_threads(arr)
+
     return jsonify(res) 
 
-
 # Admin route
+@app.route('/signin_rider/<creden>', methods = ['POST']) 
+def signin_rider(creden): 
+    arr = json.loads(creden)
+    res = db_con.validate_rider(arr)
+    if res != "invalid":
+        return jsonify(res)
+    else:
+        return res
 
 @app.route('/get_products/<id>', methods = ['GET']) 
 def get_products(id): 
@@ -340,6 +352,34 @@ def get_booking_pack(id):
     res = db_con.get_booking_pack(id)
     return jsonify(res) 
 
+@app.route('/get_riders/<id>', methods = ['GET']) 
+def get_riders(id): 
+    res = db_con.get_riders(id)
+    return jsonify(res)
+
+@app.route('/get_rider_assigned/<id>', methods = ['GET']) 
+def get_rider_assigned(id): 
+    res = db_con.get_rider_assigned(id)
+    return jsonify(res)
+
+@app.route('/get_rider_task/<filter>', methods = ['GET']) 
+def get_rider_task(filter): 
+    arr = json.loads(filter)
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.get_rider_task(arr['id'], arr['rider_id'])
+    
+    return jsonify(res)
+
+@app.route('/set_rider_assigned/<data>', methods = ['POST']) 
+def set_rider_assigned(data): 
+    arr = json.loads(data)
+    if arr['key'] == app.config['SECRET_KEY']:
+        res = db_con.set_rider_assigned(arr['id'], arr['status'])
+    else:
+        res = "invalid"
+    
+    return res
+
 @app.route('/mod_tbl_bookings/', methods = ['POST']) 
 def mod_tbl_bookings(): 
     json_data = request.get_json()
@@ -370,25 +410,25 @@ def mod_tbl_products():
     
     return jsonify(res) 
 
-# @app.route('/mod_tbl_services/', methods = ['POST']) 
-# def mod_tbl_services(): 
-#     json_data = request.get_json()
-#     if json_data['tok'] == app.config['SECRET_KEY']:
-#         res = db_con.mod_tbl_services(json_data['act'], json_data['data'])
-#     else:
-#         res = {"res":"invalid"}
+@app.route('/mod_tbl_riders', methods = ['POST']) 
+def mod_tbl_riders(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_riders(json_data['act'], json_data['data'])
+    else:
+        res = "invalid"
     
-#     return jsonify(res) 
+    return jsonify(res) 
 
-# @app.route('/mod_tbl_addons/', methods = ['POST']) 
-# def mod_tbl_addons(): 
-#     json_data = request.get_json()
-#     if json_data['tok'] == app.config['SECRET_KEY']:
-#         res = db_con.mod_tbl_addons(json_data['act'], json_data['data'])
-#     else:
-#         res = {"res":"invalid"}
+@app.route('/mod_tbl_rider_assigned', methods = ['POST']) 
+def mod_tbl_rider_assigned(): 
+    json_data = request.get_json()
+    if json_data['tok'] == app.config['SECRET_KEY']:
+        res = db_con.mod_tbl_rider_assigned(json_data['act'], json_data['data'])
+    else:
+        res = "invalid"
     
-#     return jsonify(res) 
+    return jsonify(res) 
 
 @app.route('/mod_tbl_billings/', methods = ['POST']) 
 def mod_tbl_billings(): 
@@ -409,7 +449,6 @@ def mod_tbl_users():
         res = "invalid"
     
     return jsonify(res) 
-
 # Admin route
   
 if __name__ == '__main__': 
