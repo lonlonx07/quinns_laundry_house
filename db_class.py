@@ -871,17 +871,18 @@ class db_strg:
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
                 
                 if arr['status'] == "Pickup" or arr['status'] == "Delivery":
-                    self.cur.execute(f"SELECT id from tbl_rider_assigned WHERE booking_id='{arr['booking_id']}' AND task_type='{arr['status']}'")
+                    self.cur.execute(f"SELECT id from tbl_rider_assigned WHERE booking_id={arr['booking_id']} AND task_type='{arr['status']}'")
                     exist = self.cur.fetchone()
                     if exist == None:
                         sql = f"INSERT INTO tbl_rider_assigned (booking_id,task_type,status) VALUES (\'{arr['booking_id']}\',\'{arr['status']}\','Pending')"
                         self.cur.execute(sql)
                 
                 if arr['status'] == "Delivery" or arr['status'] == "To Receive":
-                    self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id='{arr['booking_id']}'")
+                    self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id={arr['booking_id']}")
                     res = self.cur.fetchone()
+
                     if res == None:
-                        sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,timestamp,status,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'','Unpaid',0,'')"
+                        sql = f"INSERT INTO tbl_payments (booking_id,mode,ref_num,amount,timestamp,status,add_charges,description) VALUES (\'{arr['booking_id']}\','','',0,'{self.get_datetime()}','Unpaid',0,'')"
                         self.cur.execute(sql)
                     #print((self.cur.fetchone())['id'])
                 
