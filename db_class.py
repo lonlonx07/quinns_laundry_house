@@ -442,7 +442,7 @@ class db_strg:
     def get_rider_assigned(self, filter):
         self.cur.execute(f"SELECT id, first_name, last_name, address, status FROM tbl_riders")
         res1 = self.cur.fetchall()
-        spc_code = "TO_CHAR(RA.date_assigned,'YYYY-MM-DD HH:MI:SS') date_assigned, TO_CHAR(RA.date_completed,'YYYY-MM-DD HH:MI:SS') date_completed"
+        spc_code = "TO_CHAR(RA.date_assigned,'YYYY-MM-DD HH:MI:SS AM') date_assigned, TO_CHAR(RA.date_completed,'YYYY-MM-DD HH:MI:SS AM') date_completed"
         if filter == "All":
             self.cur.execute(f"""SELECT RA.*, {spc_code}, B.client, B.pickup_loc FROM tbl_rider_assigned RA 
                              LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
@@ -774,7 +774,7 @@ class db_strg:
     
     def get_thread_messages_admin(self, id):
         self.cur.execute(f"""
-                         SELECT DISTINCT TM.*, U.first_name FROM tbl_threads T 
+                         SELECT DISTINCT TM.*, TO_CHAR(TM.timestamp,'YYYY-MM-DD HH:MI:SS AM') timestamp, U.first_name FROM tbl_threads T 
                          LEFT OUTER JOIN tbl_thread_messages TM ON T.id=TM.thread_id 
                          LEFT OUTER JOIN tbl_users U ON CAST(TM.sender AS INT)=U.id 
                          WHERE T.id={id} AND T.status='Open' ORDER BY TM.timestamp ASC""")
