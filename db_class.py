@@ -34,6 +34,7 @@ class db_strg:
     new_msg = []
     new_booking = []
     new_rider_completion = []
+    cancelled_booking = []
 
     def __init__(self) -> None:
         creden_arr = {}
@@ -62,25 +63,25 @@ class db_strg:
             #conn.close()
             try:
                 self.cur.execute('''CREATE TABLE tbl_users (id SERIAL PRIMARY KEY, user_name TEXT NOT NULL, password TEXT NOT NULL, email TEXT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, address TEXT, mobile_no TEXT, timestamp TIMESTAMP, status TEXT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_pts_earned (user_id INT, amount INT, source TEXT, timestamp TIMESTAMP);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_pts_used (user_id INT, amount INT, benefit TEXT, timestamp TIMESTAMP);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback() 
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TIMESTAMP, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT, dropoff_time TEXT);''')
-                self.conn.commit()
+                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TIMESTAMP, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT, dropoff_time TEXT, cancel_reason TEXT);''')
+                self.db_commit()
             except:
                 self.conn.rollback()
 
@@ -90,67 +91,67 @@ class db_strg:
                     arr = item.split("::")
                     sql = f"INSERT INTO tbl_products (title,description,price,quantity,unit,prod_type,status) VALUES (\'{arr[1]}\', \'{arr[2]}\', \'{arr[3]}\', \'{arr[4]}\', \'{arr[5]}\', \'{arr[0]}\', \'{(arr[6]).strip()}\')"
                     self.cur.execute(sql)
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_booking_items (booking_id INT, service_id INT, quantity numeric);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_threads (id SERIAL PRIMARY KEY, booking_id INT, timestamp TIMESTAMP, status TEXT, viewed TEXT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_thread_messages (thread_id INT, sender TEXT, message TEXT, timestamp TIMESTAMP);''')
-                self.conn.commit()
+                self.cur.execute('''CREATE TABLE tbl_thread_messages (thread_id INT, sender TEXT, message TEXT, timestamp TIMESTAMP, sender_type TEXT);''')
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_payments (id SERIAL PRIMARY KEY, booking_id INT, mode TEXT, ref_num TEXT, amount NUMERIC, timestamp TIMESTAMP, status TEXT, add_charges NUMERIC, description TEXT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_rewards (id SERIAL PRIMARY KEY, title TEXT, description TEXT, pts_req INT, status TEXT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_qouta (date TEXT PRIMARY KEY, day TEXT, min_qouta INT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_day_off (sched_date TEXT, description TEXT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_book_tracking (booking_id INT, sched TEXT, accepted TEXT, pickup TEXT, drop_off TEXT, arrived TEXT, processing TEXT, outgoing TEXT, completed TEXT, cancelled TEXT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_riders (id SERIAL PRIMARY KEY, user_name TEXT NOT NULL, password TEXT NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, address TEXT, mobile_no TEXT, timestamp TIMESTAMP, status TEXT);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
             try:
                 self.cur.execute('''CREATE TABLE tbl_rider_assigned (id SERIAL PRIMARY KEY, booking_id INT, rider_id INT, task_type TEXT, status TEXT, date_assigned TIMESTAMP, date_completed TIMESTAMP);''')
-                self.conn.commit()
+                self.db_commit()
             except:
                 self.conn.rollback()
 
@@ -185,13 +186,17 @@ class db_strg:
                 )
                 """
                 self.cur.execute(sql)
-                self.conn.commit()
+                self.db_commit()
 
             except:
                 self.conn.rollback()
-
+            
         except:
-            print("Database connection error!")  
+            print("Database connection error!") 
+
+    def db_commit(self):
+        self.conn.commit()
+        #pass
 
     def get_hash_value(self, val):
         h = hashlib.new("SHA256")
@@ -240,11 +245,13 @@ class db_strg:
         res1 = self.new_booking
         res2 = self.new_msg
         res3 = self.new_rider_completion
+        res4 = self.cancelled_booking
         self.new_msg = []
         self.new_booking = []
         self.new_rider_completion = []
+        self.cancelled_booking = []
 
-        return {'bok':res1, 'msg':res2, 'com':res3}
+        return {'bok':res1, 'msg':res2, 'com':res3, 'can':res4}
 
     def clear_notification(self, uid, type):
         res = "success"
@@ -308,7 +315,7 @@ class db_strg:
             try:
                 self.cur.execute(sql)
                 id = (self.cur.fetchone())['id']
-                self.conn.commit()
+                self.db_commit()
                 res = {'id': id}
             except:
                 res = "invalid"
@@ -330,7 +337,7 @@ class db_strg:
 
             sql = f"INSERT INTO tbl_book_tracking (booking_id, sched) VALUES (\'{id}\', \'{arr['sched_date']}\')"
             self.cur.execute(sql)
-            self.conn.commit()
+            self.db_commit()
             self.new_booking.insert(0, id)
 
             res = id
@@ -340,10 +347,12 @@ class db_strg:
             
         return res 
     
-    def cancel_booking(self, id):
+    def cancel_booking(self, arr):
         try:
-            res = self.cur.execute(f"UPDATE tbl_booking SET status='Cancelled' WHERE id={id}")
-            self.conn.commit()
+            self.cur.execute(f"UPDATE tbl_booking SET status='Cancelled', cancel_reason='{arr['cancel_reason']}', cancelled_by='{arr['cancelled_by']}' WHERE id={arr['id']}")
+            self.cur.execute(f"UPDATE tbl_book_tracking SET cancelled='{self.get_datetime()}' WHERE booking_id={arr['id']}")
+            self.db_commit()
+            self.cancelled_booking.insert(0, int(arr['id']))
             res = "valid"
         except:
             res = "invalid"
@@ -375,7 +384,7 @@ class db_strg:
         else:
             try:
                 res = self.cur.execute(f"UPDATE tbl_users SET password='{arr['upass']}' WHERE email='{arr['email']}'")
-                self.conn.commit()
+                self.db_commit()
                 res = "valid"
             except:
                 res = "invalid"
@@ -387,7 +396,7 @@ class db_strg:
         if self.otp_list[arr['user_id']] == arr['otp']:
             try:
                 res = self.cur.execute(f"UPDATE tbl_users SET status='Active' WHERE id={arr['user_id']}")
-                self.conn.commit()
+                self.db_commit()
                 self.otp_list.pop(arr['user_id'])
                 res = "valid"
             except:
@@ -446,12 +455,12 @@ class db_strg:
         if filter == "All":
             self.cur.execute(f"""SELECT RA.*, {spc_code}, B.client, B.pickup_loc FROM tbl_rider_assigned RA 
                              LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
-                             ORDER BY RA.booking_id DESC""")
+                             ORDER BY RA.id DESC""")
             res = self.cur.fetchall()
         elif filter == "Pending" or filter == "Assigned" or filter == "Completed":
             self.cur.execute(f"""SELECT RA.*, B.client, B.pickup_loc FROM tbl_rider_assigned RA 
                              LEFT JOIN tbl_booking B ON RA.booking_id=B.id 
-                             WHERE RA.status='{filter}' ORDER BY RA.booking_id DESC""")
+                             WHERE RA.status='{filter}' ORDER BY RA.id DESC""")
             res = self.cur.fetchall()
         else:
             self.cur.execute(f"""SELECT RA.*, B.client, B.pickup_loc FROM tbl_rider_assigned RA 
@@ -614,7 +623,7 @@ class db_strg:
         res = "valid"
         try:
             self.cur.execute(f"UPDATE {arr['table']} SET {arr['field']}='{arr['value']}' WHERE {arr['ref_field']}={arr['ref_value']}")
-            self.conn.commit()
+            self.db_commit()
         except:
             res = "invalid"
             self.conn.rollback()
@@ -628,7 +637,7 @@ class db_strg:
                 arr['value'] = self.get_hash_value(arr['value'])
                 
             self.cur.execute(f"UPDATE {arr['table']} SET {arr['field']}='{arr['value']}' WHERE {arr['ref_field']}={arr['ref_value']}")
-            self.conn.commit()
+            self.db_commit()
         except:
             res = "invalid"
             self.conn.rollback()
@@ -666,9 +675,9 @@ class db_strg:
         res = "valid"
         try:
             self.cur.execute(f"UPDATE tbl_threads SET viewed='{arr['user_id']}' WHERE id={arr['thread_id']}")
-            sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp) VALUES (\'{arr['thread_id']}\', \'{arr['user_id']}\', \'{arr['message']}\', \'{self.get_datetime()}\')"
+            sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp, sender_type) VALUES (\'{arr['thread_id']}\', \'{arr['user_id']}\', \'{arr['message']}\', \'{self.get_datetime()}\', \'{arr['sender_type']}\')"
             self.cur.execute(sql)
-            self.conn.commit()
+            self.db_commit()
             self.new_msg.insert(0, arr['thread_id'])
         except:
             res = "invalid"
@@ -727,7 +736,7 @@ class db_strg:
                             friday = '{arr['friday']}',
                             saturday = '{arr['saturday']}'
                             """)
-            self.conn.commit()
+            self.db_commit()
         except:
             res = "invalid"
             self.conn.rollback()
@@ -752,7 +761,7 @@ class db_strg:
                 sql = f"DELETE FROM tbl_day_off WHERE sched_date='{arr['sched_date']}'"
   
             self.cur.execute(sql)
-            self.conn.commit()
+            self.db_commit()
 
             self.cur.execute(f"SELECT * FROM tbl_day_off ORDER BY sched_date ASC")
             res = self.cur.fetchall()
@@ -774,9 +783,10 @@ class db_strg:
     
     def get_thread_messages_admin(self, id):
         self.cur.execute(f"""
-                         SELECT DISTINCT TM.*, TO_CHAR(TM.timestamp,'YYYY-MM-DD HH:MI:SS AM') timestamp, U.first_name FROM tbl_threads T 
+                         SELECT DISTINCT TM.*, TO_CHAR(TM.timestamp,'YYYY-MM-DD HH:MI:SS AM') timestamp, U.first_name, R.first_name AS rider_name FROM tbl_threads T 
                          LEFT OUTER JOIN tbl_thread_messages TM ON T.id=TM.thread_id 
                          LEFT OUTER JOIN tbl_users U ON CAST(TM.sender AS INT)=U.id 
+                         LEFT OUTER JOIN tbl_riders R ON CAST(TM.sender AS INT)=R.id
                          WHERE T.id={id} AND T.status='Open' ORDER BY TM.timestamp ASC""")
         res = self.cur.fetchall()
 
@@ -785,9 +795,9 @@ class db_strg:
     def set_thread_reply_admin(self, arr):
         res = "valid"
         try:
-            sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp) VALUES (\'{arr['thread_id']}\', \'{arr['sender_id']}\', \'{arr['message']}\', \'{self.get_datetime()}\')"
+            sql = f"INSERT INTO tbl_thread_messages (thread_id, sender, message, timestamp, sender_type) VALUES (\'{arr['thread_id']}\', \'{arr['sender_id']}\', \'{arr['message']}\', \'{self.get_datetime()}\', \'{arr['sender_type']}\')"
             self.cur.execute(sql)
-            self.conn.commit()
+            self.db_commit()
         except:
             res = "invalid"
 
@@ -836,7 +846,7 @@ class db_strg:
                 else:
                     if arr['sender'] == '0':
                         self.cur.execute(f"DELETE FROM tbl_thread_messages WHERE thread_id = {arr['thread_id']} AND timestamp = '{arr['timestamp']}'")
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -860,14 +870,14 @@ class db_strg:
                 self.cur.execute(f"DELETE FROM tbl_threads WHERE booking_id = '{arr['booking_id']}'")
                 self.cur.execute(f"DELETE FROM tbl_thread_messages TM USING tbl_threads T WHERE T.booking_id = '{arr['booking_id']}' AND TM.thread_id = T.id")
                 self.cur.execute(f"DELETE FROM tbl_rider_assigned WHERE booking_id = '{arr['booking_id']}'")
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
         elif act == "Update": 
             res = "valid"
             try:
-                self.cur.execute(f"UPDATE tbl_booking SET status='{arr['status']}', logistics_fee='{arr['logistics_fee']}' WHERE id={arr['booking_id']}")
+                self.cur.execute(f"UPDATE tbl_booking SET status='{arr['status']}', logistics_fee='{arr['logistics_fee']}', cancel_reason='{arr['cancel_reason']}', cancelled_by='{arr['cancelled_by']}' WHERE id={arr['booking_id']}")
                 stat_arr = {'Pending':'sched','Confirmed':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','To Receive':'outgoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
                 
@@ -897,7 +907,7 @@ class db_strg:
                         if item['qty'] == 0:
                             self.cur.execute(f"DELETE FROM tbl_booking_items WHERE booking_id={arr['booking_id']} AND service_id={item['service_id']}")
 
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -939,7 +949,7 @@ class db_strg:
             try:
                 sql = f"INSERT INTO tbl_rewards (title, description, pts_req, status) VALUES (\'{arr['title']}\', \'{arr['description']}\', \'{arr['pts_req']}\', \'{arr['status']}\') RETURNING id"
                 self.cur.execute(sql)
-                self.conn.commit()
+                self.db_commit()
                 res = (self.cur.fetchone())['id']
             except:
                 res = "invalid"
@@ -947,7 +957,7 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"UPDATE tbl_rewards SET title='{arr['title']}', description='{arr['description']}', pts_req='{arr['pts_req']}', status='{arr['status']}' WHERE id={arr['id']}")
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -955,7 +965,7 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"DELETE FROM tbl_rewards WHERE id={arr['id']}")
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -1008,7 +1018,7 @@ class db_strg:
             try:
                 sql = f"INSERT INTO tbl_products (title, description, price, quantity, unit, prod_type, status) VALUES (\'{arr['title']}\', \'{arr['description']}\', \'{arr['price']}\', \'{arr['quantity']}\', \'{arr['unit']}\', \'{arr['prod_type']}\', \'{arr['status']}\') RETURNING id"
                 self.cur.execute(sql)
-                self.conn.commit()
+                self.db_commit()
                 res = (self.cur.fetchone())['id']
             except:
                 res = "invalid"
@@ -1019,7 +1029,7 @@ class db_strg:
                     self.cur.execute(f"UPDATE tbl_products SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', status='{arr['status']}' WHERE id={arr['id']}")
                 else:
                     self.cur.execute(f"UPDATE tbl_products SET title='{arr['title']}', description='{arr['description']}', price='{arr['price']}', quantity='{arr['quantity']}', unit='{arr['unit']}', status='{arr['status']}' WHERE id={arr['id']}")
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -1033,7 +1043,7 @@ class db_strg:
                 else:
                     self.cur.execute(f"UPDATE tbl_products SET status='Deleted' WHERE id={arr['id']}")
                     res = "taken"
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -1050,7 +1060,7 @@ class db_strg:
                 if exist == None:
                     sql = f"INSERT INTO tbl_riders (user_name, password, first_name, last_name, address, mobile_no, timestamp, status) VALUES (\'{arr['user_name']}\', \'{arr['password']}\', \'{arr['first_name']}\', \'{arr['last_name']}\', \'{arr['address']}\', \'{arr['mobile_no']}\', \'{self.get_datetime()}\', \'{arr['status']}\') RETURNING id"
                     self.cur.execute(sql)
-                    self.conn.commit()
+                    self.db_commit()
                     res = (self.cur.fetchone())['id']
                 else:
                     res = "exist"
@@ -1065,7 +1075,7 @@ class db_strg:
                         self.cur.execute(f"UPDATE tbl_riders SET user_name='{arr['user_name']}', first_name='{arr['first_name']}', last_name='{arr['last_name']}', address='{arr['address']}', mobile_no='{arr['mobile_no']}', status='{arr['status']}' WHERE id={arr['id']}")
                     else:
                         self.cur.execute(f"UPDATE tbl_riders SET user_name='{arr['user_name']}', password='{arr['password']}', first_name='{arr['first_name']}', last_name='{arr['last_name']}', address='{arr['address']}', mobile_no='{arr['mobile_no']}', status='{arr['status']}' WHERE id={arr['id']}")
-                    self.conn.commit()
+                    self.db_commit()
                 else:
                     res = "exist"
             except:
@@ -1080,7 +1090,7 @@ class db_strg:
                 else:
                     self.cur.execute(f"UPDATE tbl_riders SET status='Inactive' WHERE id={arr['id']}")
                     res = "taken"
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -1093,7 +1103,7 @@ class db_strg:
         if act == "Update":
             try:
                 self.cur.execute(f"UPDATE tbl_rider_assigned SET rider_id='{arr['rider_id']}', status='{arr['status']}', date_assigned='{self.get_datetime()}' WHERE id={arr['id']}")
-                self.conn.commit()
+                self.db_commit()
                 try:
                     self.rider_ntfy_dat[self.rider_ntfy_tok[arr['rider_id']]] = {}
                     self.rider_ntfy_dat[self.rider_ntfy_tok[arr['rider_id']]]['content'] = f"New task has been assigned to you."
@@ -1113,7 +1123,7 @@ class db_strg:
         res = "valid"
         try:
             self.cur.execute(f"UPDATE tbl_rider_assigned SET status='{status}', date_completed='{self.get_datetime()}' WHERE id={id}")
-            self.conn.commit()
+            self.db_commit()
             self.new_rider_completion.insert(0, id)
         except:
             res = "invalid"
@@ -1141,7 +1151,7 @@ class db_strg:
                         self.cur.execute(f"UPDATE tbl_book_tracking SET completed=\'{self.get_datetime()}\' WHERE booking_id={arr['booking_id']}")
                         send_ntfy = 1
 
-                self.conn.commit()
+                self.db_commit()
             except:
                 print("Billing error")
                 res = "invalid"
@@ -1173,7 +1183,7 @@ class db_strg:
             res = "valid"
             try:
                 self.cur.execute(f"UPDATE tbl_users SET status='{arr['status']}' WHERE id={arr['id']}")
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()
@@ -1188,7 +1198,7 @@ class db_strg:
                     self.cur.execute(f"UPDATE tbl_users SET user_name='', email='' WHERE id={arr['id']}")
                     res = "taken"
 
-                self.conn.commit()
+                self.db_commit()
             except:
                 res = "invalid"
                 self.conn.rollback()

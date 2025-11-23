@@ -127,7 +127,7 @@ def cancel_booking(cnd):
     res = "invalid"
     arr = json.loads(cnd)
     if arr['key'] == app.config['SECRET_KEY']:
-        res = db_con.cancel_booking(arr['id'])
+        res = db_con.cancel_booking(arr)
 
     return res
 
