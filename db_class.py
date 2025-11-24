@@ -80,7 +80,7 @@ class db_strg:
                 self.conn.rollback() 
 
             try:
-                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TIMESTAMP, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT, dropoff_time TEXT, cancel_reason TEXT);''')
+                self.cur.execute('''CREATE TABLE tbl_booking (id SERIAL PRIMARY KEY, user_id INT, schedule TEXT, mode TEXT, client TEXT, contact TEXT, pickup_loc TEXT, quantity TEXT, unit TEXT, timestamp TIMESTAMP, status TEXT, gps_coordinate TEXT, logistics_fee NUMERIC, notes TEXT, dropoff_time TEXT, cancel_reason TEXT, cancelled_by TEXT);''')
                 self.db_commit()
             except:
                 self.conn.rollback()
@@ -188,6 +188,12 @@ class db_strg:
                 self.cur.execute(sql)
                 self.db_commit()
 
+            except:
+                self.conn.rollback()
+
+            try:
+                self.cur.execute('''ALTER TABLE tbl_booking ADD COLUMN cancelled_by TEXT''')
+                self.conn.commit()
             except:
                 self.conn.rollback()
             
@@ -876,20 +882,18 @@ class db_strg:
                 self.conn.rollback()
         elif act == "Update": 
             res = "valid"
-            try:
+            try: 
                 self.cur.execute(f"UPDATE tbl_booking SET status='{arr['status']}', logistics_fee='{arr['logistics_fee']}', cancel_reason='{arr['cancel_reason']}', cancelled_by='{arr['cancelled_by']}' WHERE id={arr['booking_id']}")
                 stat_arr = {'Pending':'sched','Confirmed':'accepted','Pickup':'pickup','Drop Off':'drop_off','Arrived':'arrived','Ongoing':'processing','Delivery':'outgoing','To Receive':'outgoing','Completed':'completed','Cancelled':'cancelled'}
                 self.cur.execute(f"UPDATE tbl_book_tracking SET {stat_arr[arr['status']]}='{self.get_datetime()}' WHERE booking_id={arr['booking_id']}")
                 
-                try:
-                    if arr['status'] == "Pickup" or arr['status'] == "Delivery":
-                        self.cur.execute(f"SELECT id from tbl_rider_assigned WHERE booking_id={arr['booking_id']} AND task_type='{arr['status']}'")
-                        exist = self.cur.fetchone()
-                        if exist == None:
-                            sql = f"INSERT INTO tbl_rider_assigned (booking_id,task_type,status) VALUES (\'{arr['booking_id']}\',\'{arr['status']}\','Pending')"
-                            self.cur.execute(sql)
-                except:
-                    pass
+                if arr['status'] == "Pickup" or arr['status'] == "Delivery":
+                    self.cur.execute(f"SELECT id from tbl_rider_assigned WHERE booking_id={arr['booking_id']} AND task_type='{arr['status']}'")
+                    exist = self.cur.fetchone()
+                    if exist == None:
+                        sql = f"INSERT INTO tbl_rider_assigned (booking_id,task_type,status) VALUES (\'{arr['booking_id']}\',\'{arr['status']}\','Pending')"
+                        self.cur.execute(sql)
+                
                 if arr['status'] == "Delivery" or arr['status'] == "To Receive":
                     self.cur.execute(f"SELECT id from tbl_payments WHERE booking_id={arr['booking_id']}")
                     res = self.cur.fetchone()
