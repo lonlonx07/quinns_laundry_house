@@ -519,7 +519,7 @@ class db_strg:
     
     def get_booking(self, id):
         
-        self.cur.execute(f"""SELECT B.id, B.mode, B.timestamp AS sched_date, B.status, BT.* FROM tbl_booking B 
+        self.cur.execute(f"""SELECT B.id, B.mode, TO_CHAR(B.timestamp,'YYYY-MM-DD HH:MI:SS AM') timestamp AS sched_date, B.status, BT.* FROM tbl_booking B 
                          LEFT JOIN tbl_book_tracking BT ON B.id=BT.booking_id 
                          WHERE B.user_id={id} ORDER BY B.timestamp DESC""")
         res = self.cur.fetchall()
